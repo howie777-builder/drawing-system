@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="docTitle">DrawFlow 圖面管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#08090f;--bg2:#0f1118;--bg3:#161b26;--bg4:#1c2233;
+  --border:#1e2536;--border2:#28304a;
+  --ac:#4f8ef7;--ac2:#7ab3ff;--adim:rgba(79,142,247,.1);--adim2:rgba(79,142,247,.18);
+  --green:#22c55e;--gdim:rgba(34,197,94,.1);
+  --amber:#f5a623;--amdim:rgba(245,166,35,.1);
+  --red:#ef4444;--rdim:rgba(239,68,68,.1);
+  --purple:#a78bfa;--pdim:rgba(167,139,250,.1);
+  --cyan:#06b6d4;--cdim:rgba(6,182,212,.1);
+  --pink:#f472b6;--pkdim:rgba(244,114,182,.1);
+  --text:#d8e0f0;--t2:#6b7a99;--t3:#353e58;
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  --r:8px;--rl:14px;--rxl:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;font-size:14px;overflow:hidden}
+
+/* LOGIN */
+.lw{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
+.lcard{width:420px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rxl);padding:40px;position:relative;overflow:hidden}
+.lcard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(79,142,247,.07),transparent 70%);pointer-events:none}
+.lbrand{text-align:center;margin-bottom:28px}
+.lbrand-logo{width:64px;height:64px;border-radius:14px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+.lbrand-logo img{width:100%;height:100%;object-fit:contain}
+.lbrand-name{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--ac2);letter-spacing:.1em}
+.lbrand-sub{font-size:11px;color:var(--t3);margin-top:2px}
+.lf{margin-bottom:12px}
+.lf label{font-size:9.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:5px}
+.lf input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s}
+.lf input:focus{border-color:var(--ac)}
+.lf input::placeholder{color:var(--t3)}
+.lerr{color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;min-height:18px}
+.ldemo{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.ldemo-lbl{font-size:10px;color:var(--t3);text-align:center;margin-bottom:8px}
+.daccs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dacc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer;transition:all .14s}
+.dacc:hover{border-color:var(--ac);background:var(--adim)}
+.dacc-role{font-size:8.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em}
+.dacc-name{font-size:12px;color:var(--text);font-weight:500;margin-top:1px}
+.dacc-cred{font-size:9.5px;color:var(--t3);font-family:var(--mono)}
+
+/* APP LAYOUT */
+.app{display:flex;height:100vh;opacity:0;transition:opacity .3s}
+.app.vis{opacity:1}
+.sb{width:228px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* SIDEBAR */
+.sb-top{padding:14px 14px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.sb-top:hover{background:var(--bg3)}
+.sb-brand-logo{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden;background:var(--adim);border:1px solid var(--border2)}
+.sb-brand-logo img{width:100%;height:100%;object-fit:contain}
+.sb-brand-name{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ac2);letter-spacing:.08em}
+.sb-brand-sub{font-size:9px;color:var(--t3)}
+.sb-user{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sb-av{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.sb-uname{font-size:12px;font-weight:500;color:var(--text)}
+.sb-urole{font-size:9px;color:var(--t3)}
+.sb-out{margin-left:auto;padding:3px 7px;border-radius:5px;font-size:9px;border:1px solid var(--border2);background:transparent;color:var(--t3);cursor:pointer;font-family:var(--sans);transition:all .13s}
+.sb-out:hover{border-color:var(--red);color:var(--red)}
+.nav{padding:8px 6px;flex:1;overflow-y:auto}
+.ng{margin-bottom:14px}
+.nl{font-size:8.5px;font-weight:700;color:var(--t3);letter-spacing:.14em;text-transform:uppercase;padding:0 10px;margin-bottom:4px}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r);cursor:pointer;color:var(--t2);font-size:12.5px;transition:all .12s;user-select:none}
+.ni:hover{background:var(--bg3);color:var(--text)}
+.ni.on{background:var(--adim2);color:var(--ac2)}
+.ni .ic{width:16px;text-align:center;font-size:13px;flex-shrink:0}
+.nbdg{margin-left:auto;background:var(--bg4);color:var(--t3);font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:99px;border:1px solid var(--border);min-width:20px;text-align:center}
+.ni.on .nbdg{background:var(--adim);color:var(--ac);border-color:rgba(79,142,247,.3)}
+.sbft{padding:8px 6px;border-top:1px solid var(--border)}
+
+/* TOPBAR */
+.tb{height:52px;padding:0 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2);flex-shrink:0}
+.sw{flex:1;max-width:440px;position:relative}
+.sw input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px 7px 34px;color:var(--text);font-family:var(--sans);font-size:12.5px;outline:none;transition:border-color .15s}
+.sw input:focus{border-color:var(--ac)}
+.sw input::placeholder{color:var(--t3)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:13px;pointer-events:none}
+.tr{margin-left:auto;display:flex;gap:7px;align-items:center}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:var(--r);font-family:var(--sans);font-size:12.5px;cursor:pointer;border:1px solid transparent;transition:all .14s;font-weight:500;white-space:nowrap}
+.bp{background:var(--ac);color:#fff;border-color:var(--ac)}.bp:hover{background:var(--ac2);border-color:var(--ac2)}
+.bo{background:transparent;color:var(--t2);border-color:var(--border2)}.bo:hover{background:var(--bg3);color:var(--text)}
+.bg2{background:transparent;color:var(--t2);border:none;padding:6px 8px;font-size:18px}.bg2:hover{color:var(--text)}
+.bsm{padding:4px 10px;font-size:11px}
+.bxs{padding:2px 8px;font-size:10px}
+.b-green{background:var(--green);color:#fff;border-color:var(--green)}.b-green:hover{filter:brightness(1.1)}
+.b-red{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,.25)}.b-red:hover{background:var(--red);color:#fff}
+.b-amber{background:var(--amdim);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
+.b-purple{background:var(--pdim);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+
+/* CONTENT */
+.ct{flex:1;overflow-y:auto;padding:20px}
+
+/* STATS */
+.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.sc.blue::after{background:var(--ac)}.sc.green::after{background:var(--green)}.sc.amber::after{background:var(--amber)}.sc.purple::after{background:var(--purple)}
+.sl{font-size:9.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+.sv{font-family:var(--mono);font-size:26px;font-weight:700;margin:5px 0 2px}
+.sd{font-size:10px;color:var(--t3)}
+.sc.blue .sv{color:var(--ac2)}.sc.green .sv{color:var(--green)}.sc.amber .sv{color:var(--amber)}.sc.purple .sv{color:var(--purple)}
+
+/* PAGE HEADER */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.ph-t{font-size:16px;font-weight:700}
+.ph-s{font-size:11px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+
+/* TABLE */
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg3)}
+th{padding:9px 14px;text-align:left;font-size:9.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.pr:hover td{background:var(--bg3);cursor:pointer}
+.dn{font-family:var(--mono);font-size:11px;color:var(--ac2);font-weight:700}
+.dna{color:var(--text);font-weight:500;font-size:13px}
+.ds{font-size:10px;color:var(--t3);margin-top:1px}
+.ab{display:flex;gap:5px;opacity:0;transition:opacity .14s}
+tr:hover .ab{opacity:1}
+
+/* PRODUCT LOGO THUMBNAIL in table */
+.prod-logo-thumb{width:32px;height:32px;border-radius:6px;object-fit:contain;background:var(--bg3);border:1px solid var(--border);flex-shrink:0}
+.prod-logo-placeholder{width:32px;height:32px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--t3)}
+
+/* BADGES */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:.04em;border:1px solid}
+.b-ok{background:var(--gdim);color:var(--green);border-color:rgba(34,197,94,.25)}
+.b-rw{background:var(--amdim);color:var(--amber);border-color:rgba(245,166,35,.25)}
+.b-dr{background:var(--bg4);color:var(--t3);border-color:var(--border2)}
+.b-ob{background:var(--rdim);color:var(--red);border-color:rgba(239,68,68,.25)}
+.b-rv{background:var(--adim);color:var(--ac2);border-color:rgba(79,142,247,.25)}
+.b-qr{background:var(--cdim);color:var(--cyan);border-color:rgba(6,182,212,.25)}
+.b-asm{background:var(--pkdim);color:var(--pink);border-color:rgba(244,114,182,.25)}
+
+/* FILE PILLS */
+.fps{display:flex;gap:4px;flex-wrap:wrap}
+.fp{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:10px;font-family:var(--mono);font-weight:600;cursor:pointer;border:1px solid;transition:opacity .12s}
+.fp:hover{opacity:.65}
+.fp.pdf{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
+.fp.cad{color:#60a5fa;border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.07)}
+.fp.stp{color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.07)}
+.fp.img{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.07)}
+
+/* PANEL */
+.pov{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);z-index:100;display:flex;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.pov.open{opacity:1;pointer-events:all}
+.panel{width:680px;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);display:flex;flex-direction:column;transform:translateX(30px);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+.pov.open .panel{transform:translateX(0)}
+.pnlh{padding:16px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;flex-shrink:0}
+/* product logo in panel header */
+.pnlh-logo{width:52px;height:52px;border-radius:10px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
+.pnlh-logo:hover{border-color:var(--ac)}
+.pnlh-logo img{width:100%;height:100%;object-fit:contain}
+.pnlh-logo-hint{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;opacity:0;transition:opacity .15s;border-radius:10px}
+.pnlh-logo:hover .pnlh-logo-hint{opacity:1}
+.pnlb{flex:1;overflow-y:auto;padding:16px 20px}
+.pnlf{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
+.pcl{width:26px;height:26px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--border2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:12px;flex-shrink:0;transition:all .14s}
+.pcl:hover{background:var(--rdim);color:var(--red);border-color:var(--red)}
+.ps{margin-bottom:20px}
+.pst{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.mi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px}
+.mk{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.mv{font-size:12.5px;color:var(--text);margin-top:2px;font-weight:500}
+.mv.m{font-family:var(--mono);color:var(--ac2);font-size:11px}
+
+/* EDIT FIELDS */
+.ef{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;color:var(--text);font-family:var(--sans);font-size:12.5px;outline:none;transition:border-color .15s;margin-top:3px}
+.ef:focus{border-color:var(--ac)}
+select.ef{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23353e58' d='M5 7L1 3h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+
+/* PANEL TABS */
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg3)}
+.ptab{padding:9px 16px;font-size:12px;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;transition:all .14s;font-family:var(--sans);background:transparent;border-top:none;border-left:none;border-right:none}
+.ptab:hover{color:var(--t2)}
+.ptab.on{color:var(--ac2);border-bottom-color:var(--ac)}
+
+/* FILE LIST */
+.fl2{display:flex;flex-direction:column;gap:6px}
+.fi-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .14s}
+.fi-item:hover{border-color:var(--ac);background:var(--adim)}
+.fic{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.fic.pdf{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.2)}
+.fic.cad{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.2)}
+.fic.stp{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.2)}
+.fic.img{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.2)}
+.fin{flex:1;min-width:0}
+.fin-n{font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin-m{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:1px}
+.fia{display:flex;gap:5px;opacity:0;transition:opacity .14s;flex-shrink:0}
+.fi-item:hover .fia{opacity:1}
+
+/* VERSION */
+.vlist{display:flex;flex-direction:column}
+.vi{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.vi:last-child{border-bottom:none}
+.vll{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.vd{width:9px;height:9px;border-radius:50%;background:var(--border2);border:2px solid var(--border2);flex-shrink:0;margin-top:3px}
+.vd.cur{background:var(--ac);border-color:var(--ac)}.vd.ok{background:var(--green);border-color:var(--green)}
+.vc2{width:1px;flex:1;background:var(--border);margin:3px 0;min-height:16px}
+.vct{flex:1;min-width:0}
+.vtop{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.vr{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
+.vdt{font-size:10px;color:var(--t3);font-family:var(--mono);margin-left:auto}
+.vno{font-size:11.5px;color:var(--t2)}
+.vau{font-size:10px;color:var(--t3);margin-top:1px}
+
+/* BOM */
+.bom-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.bom-hdr{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg4);border-bottom:1px solid var(--border)}
+.bom-col-hdr{display:flex;gap:8px;padding:5px 10px;border-bottom:1px solid var(--border);font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em}
+.bom-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);transition:background .13s;cursor:pointer}
+.bom-row:last-child{border-bottom:none}
+.bom-row:hover{background:var(--bg4)}
+.bom-num{color:var(--ac2);font-size:11px;font-family:var(--mono);min-width:130px;flex-shrink:0}
+.bom-name{flex:1;color:var(--text);font-size:12px}
+.bom-qty{color:var(--text);font-size:11px;min-width:36px;text-align:center;flex-shrink:0;font-family:var(--mono)}
+.bom-unit{color:var(--t3);font-size:11px;min-width:28px;flex-shrink:0}
+.bom-mat{color:var(--t2);font-size:11px;min-width:100px;flex-shrink:0}
+
+/* AI */
+.ai-panel{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;margin-bottom:14px}
+.ai-hdr{padding:11px 14px;background:linear-gradient(135deg,rgba(79,142,247,.1),rgba(167,139,250,.06));border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.ai-dot{width:7px;height:7px;border-radius:50%;background:var(--ac);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+.ai-body{padding:14px}
+.ai-result{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-top:10px}
+.ai-field{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.ai-field:last-child{border-bottom:none}
+.ai-key{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;min-width:80px;flex-shrink:0;padding-top:1px}
+.ai-val{flex:1;color:var(--text);font-size:12px}
+.ai-conf{font-size:9px;padding:1px 6px;border-radius:99px;font-family:var(--mono);font-weight:700;flex-shrink:0}
+.ai-conf.high{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.ai-conf.med{background:var(--amdim);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.ai-diff-row{display:flex;align-items:flex-start;gap:10px;padding:7px;border-radius:var(--r);margin-bottom:5px}
+.ai-diff-row.changed{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.15)}
+.ai-diff-row.added{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15)}
+.ai-dtag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;font-family:var(--mono);flex-shrink:0}
+
+/* QR */
+.qr-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:14px;display:flex;gap:14px;align-items:flex-start}
+.qr-box{flex-shrink:0;background:#fff;border-radius:var(--r);padding:6px;width:88px;height:88px;display:flex;align-items:center;justify-content:center}
+
+/* USER CARDS */
+.user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.ucard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;display:flex;align-items:flex-start;gap:12px}
+.uav{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+
+/* CUSTOMER GRID */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;transition:all .15s}
+.cc:hover{border-color:var(--ac);transform:translateY(-1px)}
+.cc-av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;margin-bottom:9px;font-family:var(--mono)}
+.cc-acts{display:flex;gap:5px;margin-top:10px;opacity:0;transition:opacity .14s}
+.cc:hover .cc-acts{opacity:1}
+
+/* MODALS */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.mov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rxl);width:600px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;transform:scale(.96) translateY(8px);transition:transform .22s cubic-bezier(.16,1,.3,1)}
+.mov.open .modal{transform:scale(1) translateY(0)}
+.mh{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mt2{font-size:15px;font-weight:700}
+.mb2{flex:1;overflow-y:auto;padding:18px 22px}
+.mft{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:7px;justify-content:flex-end;flex-shrink:0}
+.fr{margin-bottom:11px}
+.fl{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:4px}
+.fi2{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;color:var(--text);font-family:var(--sans);font-size:12.5px;outline:none;transition:border-color .15s}
+.fi2:focus{border-color:var(--ac)}
+.fi2::placeholder{color:var(--t3)}
+select.fi2{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23353e58' d='M5 7L1 3h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* LOGO UPLOAD AREA */
+.logo-upload-area{border:2px dashed var(--border2);border-radius:var(--rl);padding:20px;text-align:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.logo-upload-area:hover,.logo-upload-area.drag{border-color:var(--ac);background:var(--adim)}
+.logo-upload-area img{max-width:120px;max-height:80px;object-fit:contain;border-radius:var(--r)}
+.lua-text{font-size:12px;color:var(--t2)}.lua-text strong{color:var(--ac2)}
+.lua-sub{font-size:10px;color:var(--t3)}
+
+/* DROPZONE */
+.dz{border:2px dashed var(--border2);border-radius:var(--rl);padding:20px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:10px}
+.dz:hover,.dz.drag{border-color:var(--ac);background:var(--adim)}
+.dz-i{font-size:24px;margin-bottom:4px}
+.dz-t{font-size:12px;color:var(--t2)}.dz-t strong{color:var(--ac2)}
+.dz-s{font-size:10px;color:var(--t3);margin-top:2px}
+.ufl{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.ufi{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)}
+.ufn{flex:1;font-size:11px;color:var(--text);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ufrm{padding:2px 7px;border-radius:4px;font-size:9px;border:1px solid var(--border2);background:transparent;color:var(--t3);cursor:pointer;margin-left:auto;flex-shrink:0;transition:all .12s;font-family:var(--sans)}
+.ufrm:hover{border-color:var(--red);color:var(--red);background:var(--rdim)}
+.pb{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px}
+.pf{height:100%;background:var(--ac);border-radius:2px;transition:width .25s}
+
+/* BRAND MODAL */
+.brand-preview{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:16px;display:flex;align-items:center;gap:14px;margin-top:12px}
+.brand-preview-logo{width:44px;height:44px;border-radius:10px;background:var(--bg4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.brand-preview-logo img{width:100%;height:100%;object-fit:contain}
+
+/* MISC */
+.info-box{background:var(--adim);border:1px solid rgba(79,142,247,.2);border-radius:var(--r);padding:10px 14px;font-size:11.5px;color:var(--t2);margin-bottom:12px;line-height:1.6}
+.info-box strong{color:var(--ac2)}
+.empty{text-align:center;padding:40px 20px;color:var(--t3)}
+.empty .ei{font-size:32px;margin-bottom:8px}
+.empty .et{font-size:13px;color:var(--t2);margin-bottom:3px}
+.toast-box{position:fixed;bottom:20px;right:20px;z-index:600;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:11px 15px;font-size:12.5px;display:flex;align-items:center;gap:9px;min-width:260px;animation:ti .22s ease;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.toast.ok{border-color:rgba(34,197,94,.35)}.toast.err{border-color:rgba(239,68,68,.35)}.toast.info{border-color:rgba(79,142,247,.35)}.toast.warn{border-color:rgba(245,166,35,.35)}
+@keyframes ti{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="lw" id="loginWrap">
+  <div class="lcard">
+    <div class="lbrand">
+      <div class="lbrand-logo" id="loginLogo" style="background:var(--adim);border:1px solid var(--border2)">
+        <span id="loginLogoEmoji" style="font-size:28px">📐</span>
+        <img id="loginLogoImg" src="" alt="" style="display:none">
+      </div>
+      <div class="lbrand-name" id="loginBrandName">DrawFlow</div>
+      <div class="lbrand-sub">圖面管理系統</div>
+    </div>
+    <div class="lf"><label>帳號</label><input type="text" id="li-u" placeholder="輸入帳號" autocomplete="username"></div>
+    <div class="lf"><label>密碼</label><input type="password" id="li-p" placeholder="輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="lerr" id="lerr"></div>
+    <button class="btn bp" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">登入</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="appRoot">
+  <aside class="sb">
+    <div class="sb-top" onclick="openBrandModal()" title="點擊自訂品牌">
+      <div class="sb-brand-logo" id="sbBrandLogo">
+        <span id="sbBrandEmoji" style="font-size:14px">📐</span>
+        <img id="sbBrandImg" src="" alt="" style="display:none">
+      </div>
+      <div><div class="sb-brand-name" id="sbBrandName">DrawFlow</div><div class="sb-brand-sub" id="sbBrandSub">圖面管理系統</div></div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">?</div>
+      <div><div class="sb-uname" id="sb-uname">—</div><div class="sb-urole" id="sb-urole">—</div></div>
+      <button class="sb-out" onclick="doLogout()">登出</button>
+    </div>
+    <nav class="nav">
+      <div class="ng">
+        <div class="nl">主要</div>
+        <div class="ni on" onclick="goPage('products',this)"><span class="ic">⊞</span>產品圖面<span class="nbdg" id="nb-all">0</span></div>
+        <div class="ni" onclick="goPage('assembly',this)"><span class="ic">⬡</span>組裝圖管理<span class="nbdg" id="nb-asm">0</span></div>
+        <div class="ni" onclick="goPage('customers',this)"><span class="ic">◎</span>客戶管理<span class="nbdg" id="nb-cust">0</span></div>
+        <div class="ni" onclick="goPage('qrpage',this)"><span class="ic">▣</span>QR Code<span class="nbdg" id="nb-qr">0</span></div>
+        <div class="ni" onclick="goPage('ai',this)"><span class="ic">✦</span>AI 圖面判讀</div>
+      </div>
+      <div class="ng">
+        <div class="nl">篩選狀態</div>
+        <div class="ni" onclick="filterSt('review',this)"><span class="ic" style="color:var(--amber)">●</span>待審核<span class="nbdg" id="nb-pend">0</span></div>
+        <div class="ni" onclick="filterSt('approved',this)"><span class="ic" style="color:var(--green)">●</span>已核准</div>
+        <div class="ni" onclick="filterSt('draft',this)"><span class="ic" style="color:var(--t3)">●</span>草稿</div>
+      </div>
+      <div class="ng" id="adminNav" style="display:none">
+        <div class="nl">管理員</div>
+        <div class="ni" onclick="goPage('users',this)"><span class="ic">👤</span>人員管理<span class="nbdg" id="nb-users">0</span></div>
+        <div class="ni" onclick="goPage('settings',this)"><span class="ic">⚙</span>系統設定</div>
+      </div>
+    </nav>
+    <div class="sbft">
+      <div class="ni" style="font-size:11px;color:var(--t3)"><span class="ic">☁</span><span id="connLabel">展示模式</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="tb">
+      <div class="sw"><span class="si">⌕</span><input type="text" id="searchInput" placeholder="搜尋圖號、產品名稱、材質、客戶…" oninput="onSearch(this.value)"></div>
+      <div class="tr">
+        <button class="btn bo" onclick="syncData()">↻ 同步</button>
+        <button class="btn bo" id="addCustBtn" onclick="openAddCustomer()" style="display:none">＋ 客戶</button>
+        <button class="btn bo" id="addAsmBtn" onclick="openAddAssembly()" style="display:none">＋ 組裝圖</button>
+        <button class="btn bo" id="addUserBtn" onclick="openAddUser()" style="display:none">＋ 人員</button>
+        <button class="btn bp" id="addProdBtn" onclick="openAddProduct()">＋ 新增產品</button>
+      </div>
+    </div>
+    <div class="ct" id="mainContent"></div>
+  </div>
+</div>
+
+<!-- PRODUCT DETAIL PANEL -->
+<div class="pov" id="panelOv" onclick="if(event.target===this)closePanel()">
+  <div class="panel">
+    <div class="pnlh">
+      <!-- product logo -->
+      <div class="pnlh-logo" id="pnlh-logo" onclick="triggerLogoUpload()" title="點擊更換產品 Logo">
+        <span id="pnlh-logo-em">📦</span>
+        <img id="pnlh-logo-img" src="" alt="" style="display:none">
+        <div class="pnlh-logo-hint">更換<br>Logo</div>
+      </div>
+      <input type="file" id="prod-logo-fi" style="display:none" accept="image/*" onchange="onProdLogoChange(this)">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
+          <span class="dn" id="pp-num"></span>
+          <span class="bdg b-rv" id="pp-rev"></span>
+          <span id="pp-st"></span>
+          <span id="pp-asm-tag"></span>
+          <span id="pp-qr-tag"></span>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:var(--text)" id="pp-name"></div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px" id="pp-cust"></div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:flex-start;flex-shrink:0">
+        <button class="btn bo bsm" id="editToggleBtn" onclick="toggleEdit()">✎ 編輯</button>
+        <div class="pcl" onclick="closePanel()">✕</div>
+      </div>
+    </div>
+    <div class="ptabs" id="ptabs">
+      <button class="ptab on" onclick="switchTab('info',this)">資訊</button>
+      <button class="ptab" onclick="switchTab('files',this)">檔案</button>
+      <button class="ptab" onclick="switchTab('bom',this)">BOM</button>
+      <button class="ptab" onclick="switchTab('qr',this)">QR Code</button>
+      <button class="ptab" onclick="switchTab('ai',this)">✦ AI</button>
+      <button class="ptab" onclick="switchTab('hist',this)">版本歷程</button>
+    </div>
+    <div class="pnlb" id="pnlb-content"></div>
+    <div class="pnlf" id="pnlf"></div>
+  </div>
+</div>
+
+<!-- PREVIEW -->
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(4px);z-index:300;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s" id="prevOv">
+  <div style="height:52px;display:flex;align-items:center;padding:0 16px;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
+    <button class="btn bg2" onclick="closePreview()">←</button>
+    <div><div style="font-size:13px;font-weight:500;color:var(--text)" id="prev-fname"></div><div style="font-size:10px;color:var(--t3);font-family:var(--mono)" id="prev-fmeta"></div></div>
+    <div style="margin-left:auto;display:flex;gap:7px">
+      <button class="btn bo" onclick="window.open('https://drive.google.com','_blank')">↗ Drive</button>
+      <button class="btn bo" onclick="closePreview()">關閉</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:24px" id="prev-body"></div>
+</div>
+
+<!-- ADD PRODUCT MODAL -->
+<div class="mov" id="addProdMov" onclick="if(event.target===this)closeMov('addProdMov')">
+  <div class="modal">
+    <div class="mh"><div class="mt2" id="addProdTitle">新增產品</div><div class="pcl" onclick="closeMov('addProdMov')">✕</div></div>
+    <div class="mb2">
+      <!-- LOGO UPLOAD -->
+      <div class="fr">
+        <label class="fl">產品 Logo（選填）</label>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div class="logo-upload-area" id="prod-logo-drop" style="width:100px;flex-shrink:0;min-height:80px" onclick="document.getElementById('prod-logo-fi2').click()" ondragover="dzOv(event,'prod-logo-drop')" ondragleave="document.getElementById('prod-logo-drop').classList.remove('drag')" ondrop="logoDrop(event)">
+            <span id="prod-logo-preview-em" style="font-size:28px">📦</span>
+            <img id="prod-logo-preview-img" src="" alt="" style="display:none;max-width:80px;max-height:60px;object-fit:contain;border-radius:var(--r)">
+            <div class="lua-sub">點擊上傳</div>
+          </div>
+          <input type="file" id="prod-logo-fi2" style="display:none" accept="image/*" onchange="onModalLogoChange(this)">
+          <div style="flex:1;font-size:11.5px;color:var(--t2);line-height:1.7;padding-top:4px">
+            支援 PNG、JPG、SVG。建議使用透明背景 PNG，尺寸 128×128 以上。<br>
+            <button class="btn b-red bxs" style="margin-top:6px" onclick="clearModalLogo()">✕ 清除 Logo</button>
+          </div>
+        </div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">產品圖號 *</label><input class="fi2" id="f-num" placeholder="MEC-2024-001"></div>
+        <div class="fr"><label class="fl">版次</label><select class="fi2" id="f-rev"><option>Rev A</option><option>Rev B</option><option>Rev C</option><option>Rev D</option><option>Rev E</option><option>Rev F</option></select></div>
+      </div>
+      <div class="fr"><label class="fl">產品名稱 *</label><input class="fi2" id="f-name" placeholder="例：主機底座組立"></div>
+      <div class="fr3">
+        <div class="fr"><label class="fl">材質</label><input class="fi2" id="f-mat" placeholder="例：S45C 碳鋼"></div>
+        <div class="fr"><label class="fl">客戶</label><select class="fi2" id="f-cust"><option value="">— 無指定 —</option></select></div>
+        <div class="fr"><label class="fl">狀態</label><select class="fi2" id="f-status"><option value="draft">草稿</option><option value="review">審核中</option><option value="approved">已核准</option></select></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">類型</label><select class="fi2" id="f-type"><option value="part">零件圖</option><option value="assembly">組裝圖</option><option value="detail">細部圖</option><option value="schematic">電路圖</option></select></div>
+        <div class="fr"><label class="fl">負責人</label><input class="fi2" id="f-author" placeholder="姓名"></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">Google Drive URL</label><input class="fi2" id="f-url" placeholder="https://drive.google.com/..."></div>
+        <div class="fr"><label class="fl">所屬組裝圖</label><select class="fi2" id="f-parent"><option value="">— 無 —</option></select></div>
+      </div>
+      <div class="fr"><label class="fl">版本說明</label><input class="fi2" id="f-note" placeholder="說明此版本內容…"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label class="fl" style="margin-bottom:0">圖面檔案（可多選）</label>
+        <button class="btn b-purple bxs" onclick="runAIOnPending()">✦ AI 自動判讀</button>
+      </div>
+      <div class="dz" id="dz1" onclick="document.getElementById('fi1').click()" ondragover="dzOv(event,'dz1')" ondragleave="document.getElementById('dz1').classList.remove('drag')" ondrop="dzDp(event,'dz1',1)">
+        <div class="dz-i">⊕</div><div class="dz-t"><strong>點擊或拖曳</strong>上傳多個檔案</div><div class="dz-s">DWG · DXF · STP · PDF · JPG · PNG</div>
+      </div>
+      <input type="file" id="fi1" style="display:none" multiple accept=".pdf,.dwg,.dxf,.stp,.step,.jpg,.jpeg,.png" onchange="addPF(1,this.files)">
+      <div class="ufl" id="ufl1"></div>
+      <div id="ai-quick-result" style="display:none"></div>
+      <div id="f-prog" style="display:none"><div class="pb"><div class="pf" id="f-pfill" style="width:0%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:4px" id="f-ptxt">處理中…</div></div>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('addProdMov')">取消</button><button class="btn bp" onclick="submitProduct()">儲存</button></div>
+  </div>
+</div>
+
+<!-- ADD ASSEMBLY MODAL -->
+<div class="mov" id="addAsmMov" onclick="if(event.target===this)closeMov('addAsmMov')">
+  <div class="modal">
+    <div class="mh"><div class="mt2">新增組裝圖</div><div class="pcl" onclick="closeMov('addAsmMov')">✕</div></div>
+    <div class="mb2">
+      <div class="fr2">
+        <div class="fr"><label class="fl">組裝圖號 *</label><input class="fi2" id="a-num" placeholder="ASM-2024-001"></div>
+        <div class="fr"><label class="fl">版次</label><select class="fi2" id="a-rev"><option>Rev A</option><option>Rev B</option><option>Rev C</option><option>Rev D</option><option>Rev E</option></select></div>
+      </div>
+      <div class="fr"><label class="fl">組裝名稱 *</label><input class="fi2" id="a-name" placeholder="例：主機完整組裝"></div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">客戶</label><select class="fi2" id="a-cust"><option value="">— 無指定 —</option></select></div>
+        <div class="fr"><label class="fl">負責人</label><input class="fi2" id="a-author" placeholder="姓名"></div>
+      </div>
+      <div class="fr"><label class="fl">Google Drive URL</label><input class="fi2" id="a-url" placeholder="https://drive.google.com/..."></div>
+      <div class="fr"><label class="fl">說明</label><input class="fi2" id="a-note" placeholder="…"></div>
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:10px">BOM 用料清單</div>
+      <div id="bom-builder"></div>
+      <button class="btn bo bsm" onclick="addBomRow()" style="margin-top:8px">＋ 新增零件</button>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('addAsmMov')">取消</button><button class="btn bp" onclick="submitAssembly()">建立組裝圖</button></div>
+  </div>
+</div>
+
+<!-- ADD FILE MODAL -->
+<div class="mov" id="addFileMov" onclick="if(event.target===this)closeMov('addFileMov')">
+  <div class="modal" style="width:480px">
+    <div class="mh"><div class="mt2">新增檔案</div><div class="pcl" onclick="closeMov('addFileMov')">✕</div></div>
+    <div class="mb2">
+      <div style="font-size:12px;color:var(--t2);padding:8px 10px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);margin-bottom:12px" id="af-info"></div>
+      <div class="dz" id="dz2" onclick="document.getElementById('fi2').click()" ondragover="dzOv(event,'dz2')" ondragleave="document.getElementById('dz2').classList.remove('drag')" ondrop="dzDp(event,'dz2',2)">
+        <div class="dz-i">⊕</div><div class="dz-t"><strong>點擊或拖曳</strong>上傳</div><div class="dz-s">DWG · DXF · STP · PDF · JPG · PNG</div>
+      </div>
+      <input type="file" id="fi2" style="display:none" multiple accept=".pdf,.dwg,.dxf,.stp,.step,.jpg,.jpeg,.png" onchange="addPF(2,this.files)">
+      <div class="ufl" id="ufl2"></div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">版次</label><select class="fi2" id="af-rev"><option>Rev A</option><option>Rev B</option><option>Rev C</option><option>Rev D</option><option>Rev E</option></select></div>
+        <div class="fr"><label class="fl">說明</label><input class="fi2" id="af-note" placeholder="更新說明…"></div>
+      </div>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('addFileMov')">取消</button><button class="btn bp" onclick="submitAddFile()">上傳</button></div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="mov" id="addUserMov" onclick="if(event.target===this)closeMov('addUserMov')">
+  <div class="modal" style="width:460px">
+    <div class="mh"><div class="mt2" id="userModalTitle">新增人員</div><div class="pcl" onclick="closeMov('addUserMov')">✕</div></div>
+    <div class="mb2">
+      <div class="fr2">
+        <div class="fr"><label class="fl">帳號 *</label><input class="fi2" id="u-username" placeholder="帳號（英數字）"></div>
+        <div class="fr"><label class="fl">密碼 *</label><input class="fi2" id="u-pwd" type="password" placeholder="6字元以上"></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">姓名 *</label><input class="fi2" id="u-name" placeholder="真實姓名"></div>
+        <div class="fr"><label class="fl">Email</label><input class="fi2" id="u-email" placeholder="email@company.com"></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">角色</label><select class="fi2" id="u-role"><option value="engineer">工程師</option><option value="qc">品管</option><option value="viewer">檢視者</option><option value="admin">管理員</option></select></div>
+        <div class="fr"><label class="fl">部門</label><input class="fi2" id="u-dept" placeholder="研發部"></div>
+      </div>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('addUserMov')">取消</button><button class="btn bp" id="userSubmitBtn" onclick="submitUser()">新增</button></div>
+  </div>
+</div>
+
+<!-- ADD CUSTOMER MODAL -->
+<div class="mov" id="addCustMov" onclick="if(event.target===this)closeMov('addCustMov')">
+  <div class="modal" style="width:460px">
+    <div class="mh"><div class="mt2" id="custModalTitle">新增客戶</div><div class="pcl" onclick="closeMov('addCustMov')">✕</div></div>
+    <div class="mb2">
+      <div class="fr"><label class="fl">客戶名稱 *</label><input class="fi2" id="c-name" placeholder="公司名稱"></div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">聯絡人</label><input class="fi2" id="c-contact" placeholder="姓名"></div>
+        <div class="fr"><label class="fl">電話</label><input class="fi2" id="c-tel" placeholder="02-xxxx-xxxx"></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label class="fl">Email</label><input class="fi2" id="c-email" placeholder="email@company.com"></div>
+        <div class="fr"><label class="fl">地址</label><input class="fi2" id="c-addr" placeholder="公司地址"></div>
+      </div>
+      <div class="fr"><label class="fl">備註</label><input class="fi2" id="c-note" placeholder="備註…"></div>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('addCustMov')">取消</button><button class="btn bp" id="custSubmitBtn" onclick="submitCustomer()">新增</button></div>
+  </div>
+</div>
+
+<!-- BRAND MODAL -->
+<div class="mov" id="brandMov" onclick="if(event.target===this)closeMov('brandMov')">
+  <div class="modal" style="width:500px">
+    <div class="mh"><div class="mt2">⚙ 系統品牌設定</div><div class="pcl" onclick="closeMov('brandMov')">✕</div></div>
+    <div class="mb2">
+      <div class="info-box">可更換 <strong>系統名稱、Logo、主色</strong>，以您自己的品牌對外販售。</div>
+      <!-- BRAND LOGO UPLOAD -->
+      <div class="fr">
+        <label class="fl">系統 Logo</label>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div class="logo-upload-area" id="brand-logo-drop" style="width:90px;min-height:80px" onclick="document.getElementById('brand-logo-fi').click()" ondragover="dzOv(event,'brand-logo-drop')" ondragleave="document.getElementById('brand-logo-drop').classList.remove('drag')" ondrop="brandLogoDrop(event)">
+            <span id="brand-logo-em" style="font-size:28px">📐</span>
+            <img id="brand-logo-img" src="" alt="" style="display:none;max-width:70px;max-height:56px;object-fit:contain">
+            <div class="lua-sub" style="font-size:9px">PNG/SVG</div>
+          </div>
+          <input type="file" id="brand-logo-fi" style="display:none" accept="image/*" onchange="onBrandLogoChange(this)">
+          <div style="flex:1;font-size:11.5px;color:var(--t2);line-height:1.7;padding-top:2px">
+            建議透明背景 PNG 或 SVG，尺寸 256×256 以上。<br>此 Logo 將顯示於登入頁、側邊欄、產品列表。<br>
+            <button class="btn b-red bxs" style="margin-top:6px" onclick="clearBrandLogo()">✕ 清除 Logo</button>
+          </div>
+        </div>
+      </div>
+      <div class="fr"><label class="fl">系統名稱</label><input class="fi2" id="br-name" placeholder="DrawFlow" oninput="previewBrand()"></div>
+      <div class="fr"><label class="fl">副標題</label><input class="fi2" id="br-sub" placeholder="圖面管理系統" oninput="previewBrand()"></div>
+      <div class="fr"><label class="fl">主色</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="br-color" value="#4f8ef7" oninput="previewBrand()" style="width:44px;height:32px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;cursor:pointer">
+          <input class="fi2" id="br-color-hex" placeholder="#4f8ef7" style="flex:1;font-family:var(--mono)" oninput="syncColorHex()">
+        </div>
+      </div>
+      <div class="brand-preview" id="brand-preview">
+        <div class="brand-preview-logo" id="bp-logo"><span id="bp-logo-em" style="font-size:18px">📐</span><img id="bp-logo-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain"></div>
+        <div><div style="font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:.1em" id="bp-name">DrawFlow</div><div style="font-size:11px;color:var(--t3)" id="bp-sub">圖面管理系統</div></div>
+      </div>
+    </div>
+    <div class="mft"><button class="btn bo" onclick="closeMov('brandMov')">取消</button><button class="btn bp" onclick="saveBrand()">套用品牌</button></div>
+  </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONSTANTS & HELPERS
+// ══════════════════════════════════════════════
+const COLORS=['#4f8ef7','#22c55e','#f5a623','#a78bfa','#ef4444','#06b6d4','#f97316','#ec4899'];
+const ROLE_LABEL={admin:'管理員',engineer:'工程師',qc:'品管',viewer:'檢視者'};
+const ROLE_COLOR={admin:'#ef4444',engineer:'#4f8ef7',qc:'#22c55e',viewer:'#a78bfa'};
+const ROLE_PERMS={
+  admin:   {canEdit:true,canDelete:true,canAddUser:true,canApprove:true},
+  engineer:{canEdit:true,canDelete:false,canAddUser:false,canApprove:false},
+  qc:      {canEdit:false,canDelete:false,canAddUser:false,canApprove:true},
+  viewer:  {canEdit:false,canDelete:false,canAddUser:false,canApprove:false},
+};
+function canDo(p){return currentUser&&ROLE_PERMS[currentUser.role]?.[p];}
+function el(id){return document.getElementById(id);}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function toBase64(file){return new Promise(r=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(',')[1]);rd.readAsDataURL(file);});}
+function fExt(n){return(n.split('.').pop()||'').toLowerCase();}
+function fClass(n){const t=fExt(n);if(t==='pdf')return'pdf';if(t==='dwg'||t==='dxf')return'cad';if(t==='stp'||t==='step')return'stp';return'img';}
+function fIcon(t){if(t==='pdf')return'📄';if(t==='cad')return'📐';if(t==='stp')return'⬡';return'🖼';}
+function fmtSz(b){if(!b||typeof b==='string')return b||'—';if(b>1e6)return(b/1e6).toFixed(1)+' MB';if(b>1e3)return(b/1e3).toFixed(0)+' KB';return b+' B';}
+function stBadge(s){const m={approved:'<span class="bdg b-ok">已核准</span>',review:'<span class="bdg b-rw">審核中</span>',draft:'<span class="bdg b-dr">草稿</span>',obsolete:'<span class="bdg b-ob">已廢止</span>'};return m[s]||'';}
+function today(){return new Date().toISOString().slice(0,10);}
+function showToast(msg,type='info'){
+  const icons={ok:'✓',err:'✕',info:'ℹ',warn:'⚠'};
+  const cols={ok:'var(--green)',err:'var(--red)',info:'var(--ac2)',warn:'var(--amber)'};
+  const e=document.createElement('div');e.className='toast '+type;
+  e.innerHTML=`<span style="color:${cols[type]};font-size:15px">${icons[type]}</span><span>${msg}</span>`;
+  el('toastBox').appendChild(e);setTimeout(()=>e.remove(),3500);
+}
+function closeMov(id){el(id).classList.remove('open');}
+
+// ══════════════════════════════════════════════
+// SYSTEM BRANDING
+// ══════════════════════════════════════════════
+let SYS=JSON.parse(localStorage.getItem('zumen_sys')||'{"name":"DrawFlow","sub":"圖面管理系統","color":"#4f8ef7","logoDataUrl":""}');
+let brandLogoDataUrl=SYS.logoDataUrl||'';
+
+function applyBrand(){
+  const n=SYS.name,s=SYS.sub,c=SYS.color,logo=SYS.logoDataUrl||'';
+  el('docTitle').textContent=n+' 圖面管理系統';
+  el('loginBrandName').textContent=n;
+  el('sbBrandName').textContent=n;
+  el('sbBrandSub').textContent=s;
+  // login logo
+  setLogoEl('loginLogoImg','loginLogoEmoji',logo);
+  // sidebar logo
+  setLogoEl('sbBrandImg','sbBrandEmoji',logo,'14px');
+  // accent colors
+  document.documentElement.style.setProperty('--ac',c);
+  const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
+  const l=(v)=>Math.min(255,v+40).toString(16).padStart(2,'0');
+  document.documentElement.style.setProperty('--ac2','#'+l(r)+l(g)+l(b));
+  document.documentElement.style.setProperty('--adim',`rgba(${r},${g},${b},.1)`);
+  document.documentElement.style.setProperty('--adim2',`rgba(${r},${g},${b},.18)`);
+}
+function setLogoEl(imgId,emId,url,emSize){
+  const img=el(imgId),em=el(emId);
+  if(!img||!em)return;
+  if(url){img.src=url;img.style.display='';em.style.display='none';}
+  else{img.style.display='none';em.style.display='';if(emSize)em.style.fontSize=emSize;}
+}
+function openBrandModal(){
+  if(!currentUser||currentUser.role!=='admin'){showToast('只有管理員可修改品牌','err');return;}
+  brandLogoDataUrl=SYS.logoDataUrl||'';
+  el('br-name').value=SYS.name;el('br-sub').value=SYS.sub;el('br-color').value=SYS.color;el('br-color-hex').value=SYS.color;
+  setLogoEl('brand-logo-img','brand-logo-em',brandLogoDataUrl);
+  previewBrand();el('brandMov').classList.add('open');
+}
+function previewBrand(){
+  const n=el('br-name').value||'DrawFlow',s=el('br-sub').value||'圖面管理系統',c=el('br-color').value;
+  el('bp-name').textContent=n;el('bp-sub').textContent=s;el('bp-name').style.color=c;el('br-color-hex').value=c;
+  setLogoEl('bp-logo-img','bp-logo-em',brandLogoDataUrl);
+}
+function syncColorHex(){const v=el('br-color-hex').value;if(/^#[0-9a-f]{6}$/i.test(v))el('br-color').value=v;previewBrand();}
+function onBrandLogoChange(inp){if(!inp.files[0])return;const r=new FileReader();r.onload=e=>{brandLogoDataUrl=e.target.result;setLogoEl('brand-logo-img','brand-logo-em',brandLogoDataUrl);previewBrand();};r.readAsDataURL(inp.files[0]);}
+function brandLogoDrop(e){e.preventDefault();el('brand-logo-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const inp={files:[f]};onBrandLogoChange(inp);}}
+function clearBrandLogo(){brandLogoDataUrl='';setLogoEl('brand-logo-img','brand-logo-em','');el('brand-logo-fi').value='';previewBrand();}
+function saveBrand(){
+  SYS={name:el('br-name').value.trim()||'DrawFlow',sub:el('br-sub').value.trim()||'圖面管理系統',color:el('br-color').value,logoDataUrl:brandLogoDataUrl};
+  localStorage.setItem('zumen_sys',JSON.stringify(SYS));applyBrand();closeMov('brandMov');
+  showToast('品牌設定已套用：'+SYS.name,'ok');
+}
+
+// ══════════════════════════════════════════════
+// PRODUCT LOGO (per product)
+// ══════════════════════════════════════════════
+let modalLogoDataUrl=''; // logo being set in add product modal
+
+function onModalLogoChange(inp){
+  if(!inp.files[0])return;
+  const r=new FileReader();r.onload=e=>{
+    modalLogoDataUrl=e.target.result;
+    el('prod-logo-preview-img').src=modalLogoDataUrl;
+    el('prod-logo-preview-img').style.display='';
+    el('prod-logo-preview-em').style.display='none';
+  };r.readAsDataURL(inp.files[0]);
+}
+function logoDrop(e){e.preventDefault();el('prod-logo-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const fk=new FileReader();fk.onload=ev=>{modalLogoDataUrl=ev.target.result;el('prod-logo-preview-img').src=modalLogoDataUrl;el('prod-logo-preview-img').style.display='';el('prod-logo-preview-em').style.display='none';};fk.readAsDataURL(f);}}
+function clearModalLogo(){modalLogoDataUrl='';el('prod-logo-preview-img').style.display='none';el('prod-logo-preview-em').style.display='';el('prod-logo-fi2').value='';}
+
+// Panel logo (edit existing product logo)
+function triggerLogoUpload(){if(!canDo('canEdit')&&!canDo('edit')){showToast('無編輯權限','err');return;}el('prod-logo-fi').click();}
+function onProdLogoChange(inp){
+  if(!inp.files[0]||!selProd)return;
+  const r=new FileReader();r.onload=e=>{
+    selProd.logoDataUrl=e.target.result;
+    setPanelLogo(selProd);
+    renderPage(curPage);showToast('產品 Logo 已更新','ok');
+  };r.readAsDataURL(inp.files[0]);
+}
+function setPanelLogo(p){
+  const img=el('pnlh-logo-img'),em=el('pnlh-logo-em');if(!img||!em)return;
+  if(p.logoDataUrl){img.src=p.logoDataUrl;img.style.display='';em.style.display='none';}
+  else{img.style.display='none';em.style.display='';}
+}
+function prodLogoThumb(p){
+  if(p.logoDataUrl) return`<img src="${p.logoDataUrl}" class="prod-logo-thumb" alt="logo">`;
+  return`<div class="prod-logo-placeholder">📦</div>`;
+}
+
+// ══════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════
+let USERS=JSON.parse(localStorage.getItem('zumen_users')||'null')||[
+  {id:'U001',username:'admin',password:'admin123',name:'系統管理員',email:'admin@company.com',role:'admin',dept:'管理部',active:true},
+];
+function saveUsers(){localStorage.setItem('zumen_users',JSON.stringify(USERS));}
+
+// ══════════════════════════════════════════════
+// DEMO DATA
+// ══════════════════════════════════════════════
+let customers = JSON.parse(localStorage.getItem('zm_customers') || '[]');
+let assemblies = JSON.parse(localStorage.getItem('zm_assemblies') || '[]');
+let products   = JSON.parse(localStorage.getItem('zm_products')   || '[]');
+
+function saveData(){
+  localStorage.setItem('zm_customers',  JSON.stringify(customers));
+  localStorage.setItem('zm_assemblies', JSON.stringify(assemblies));
+  localStorage.setItem('zm_products',   JSON.stringify(products));
+}
+
+// ══════════════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════════════
+let currentUser=null, curPage='products', curFilter={search:'',status:''};
+let selProd=null, selAsm=null, curTab='info', isEditMode=false;
+let pending1=[], pending2=[], bomRows=[], editingCustId=null, editingUserId=null, tempAiResult=null;
+
+// ══════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ══════════════════════════════════════════════
+function fillLogin(u,p){el('li-u').value=u;el('li-p').value=p;}
+function doLogin(){
+  const u=el('li-u').value.trim(),p=el('li-p').value;
+  const user=USERS.find(x=>x.username===u&&x.password===p&&x.active);
+  if(!user){el('lerr').textContent='帳號或密碼錯誤';return;}
+  currentUser=user;
+  const lw=el('loginWrap');lw.style.opacity='0';setTimeout(()=>{lw.style.display='none';el('appRoot').classList.add('vis');},300);
+  el('sb-av').textContent=user.name.slice(0,2);
+  el('sb-av').style.background=ROLE_COLOR[user.role]+'22';
+  el('sb-av').style.color=ROLE_COLOR[user.role];
+  el('sb-uname').textContent=user.name;el('sb-urole').textContent=ROLE_LABEL[user.role];
+  if(user.role==='admin')el('adminNav').style.display='';
+  refreshNav();
+  if(products.length===0&&customers.length===0&&assemblies.length===0){
+    renderPage('products');
+    renderWelcome();
+  } else {
+    renderPage('products');
+  }
+}
+function doLogout(){
+  currentUser=null;const lw=el('loginWrap');lw.style.display='flex';lw.style.opacity='1';
+  el('appRoot').classList.remove('vis');el('adminNav').style.display='none';
+  el('lerr').textContent='';el('li-u').value='';el('li-p').value='';
+}
+
+// ══════════════════════════════════════════════
+// NAV & ROUTING
+// ══════════════════════════════════════════════
+function refreshNav(){
+  el('nb-all').textContent=products.length;el('nb-asm').textContent=assemblies.length;
+  el('nb-cust').textContent=customers.length;el('nb-pend').textContent=products.filter(p=>p.status==='review').length;
+  el('nb-qr').textContent=products.filter(p=>p.qrGenerated).length+assemblies.filter(a=>a.qrGenerated).length;
+  el('nb-users').textContent=USERS.length;
+}
+function goPage(page,navEl){
+  curPage=page;curFilter={search:'',status:''};
+  const si=el('searchInput');if(si)si.value='';
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  el('addProdBtn').style.display=page==='customers'||page==='users'||page==='settings'||page==='qrpage'||page==='ai'?'none':'';
+  el('addCustBtn').style.display=page==='customers'?'':'none';
+  el('addAsmBtn').style.display=page==='assembly'?'':'none';
+  el('addUserBtn').style.display=page==='users'?'':'none';
+  renderPage(page);
+}
+function filterSt(st,navEl){
+  curPage='products';curFilter={search:'',status:st};
+  el('searchInput').value='';
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(navEl)navEl.classList.add('on');
+  el('addProdBtn').style.display='';el('addCustBtn').style.display='none';el('addAsmBtn').style.display='none';el('addUserBtn').style.display='none';
+  renderPage('products');
+}
+function onSearch(v){curFilter.search=v;renderPage(curPage);}
+function renderPage(page){
+  const c=el('mainContent');
+  if(page==='customers'){c.innerHTML=renderCustomers();return;}
+  if(page==='assembly'){c.innerHTML=renderAssemblyPage();return;}
+  if(page==='qrpage'){c.innerHTML=renderQRPage();return;}
+  if(page==='ai'){c.innerHTML=renderAIPage();return;}
+  if(page==='users'){c.innerHTML=renderUsersPage();return;}
+  if(page==='settings'){c.innerHTML=renderSettings();return;}
+  c.innerHTML=renderProductsPage();
+}
+
+// ══════════════════════════════════════════════
+// PRODUCTS PAGE
+// ══════════════════════════════════════════════
+function getFiltered(){
+  let list=[...products];
+  if(curFilter.status)list=list.filter(p=>p.status===curFilter.status);
+  if(curFilter.search){
+    const q=curFilter.search.toLowerCase();
+    const cm=Object.fromEntries(customers.map(c=>[c.id,c.name]));
+    list=list.filter(p=>p.num.toLowerCase().includes(q)||p.name.toLowerCase().includes(q)||(p.material||'').toLowerCase().includes(q)||(cm[p.custId]||'').toLowerCase().includes(q)||p.author.toLowerCase().includes(q));
+  }
+  return list;
+}
+function renderProductsPage(){
+  const list=getFiltered();
+  const cm=Object.fromEntries(customers.map(c=>[c.id,c.name]));
+  const typeMap={part:'零件',assembly:'組裝',detail:'細部',schematic:'電路'};
+  const stats=`<div class="sr">
+    <div class="sc blue"><div class="sl">產品圖面</div><div class="sv">${products.length}</div><div class="sd">共計</div></div>
+    <div class="sc green"><div class="sl">已核准</div><div class="sv">${products.filter(p=>p.status==='approved').length}</div><div class="sd">有效版本</div></div>
+    <div class="sc amber"><div class="sl">待審核</div><div class="sv">${products.filter(p=>p.status==='review').length}</div><div class="sd">等待簽核</div></div>
+    <div class="sc purple"><div class="sl">已建 QR</div><div class="sv">${products.filter(p=>p.qrGenerated).length}</div><div class="sd">/ ${products.length}</div></div>
+  </div>`;
+  const rows=list.length?list.map(p=>{
+    const pills=p.files.map(f=>`<span class="fp ${f.type}" onclick="event.stopPropagation();previewFile('${p.id}','${f.id}')">${fIcon(f.type)} ${f.type.toUpperCase()}</span>`).join('');
+    const qrTag=p.qrGenerated?`<span style="color:var(--cyan);font-size:11px;font-family:var(--mono)">▣</span>`:`<span style="color:var(--t3);font-size:11px">—</span>`;
+    return`<tr class="pr" onclick="openPanel('${p.id}')">
+      <td>${prodLogoThumb(p)}</td>
+      <td><span class="dn">${p.num}</span></td>
+      <td><div class="dna">${p.name}</div><div class="ds">${cm[p.custId]||'—'}</div></td>
+      <td><span style="font-size:12px;color:var(--t2)">${p.material||'—'}</span></td>
+      <td><span class="bdg b-dr" style="font-size:9px">${typeMap[p.type]||p.type}</span></td>
+      <td><span class="bdg b-rv">${p.rev}</span></td>
+      <td>${stBadge(p.status)}</td>
+      <td>${qrTag}</td>
+      <td><div class="fps">${pills||'<span style="color:var(--t3);font-size:10px">無</span>'}</div></td>
+      <td><span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${p.date}</span></td>
+      <td><div class="ab">
+        <button class="btn bo bxs" onclick="event.stopPropagation();openPanel('${p.id}')">詳細</button>
+        ${canDo('edit')?`<button class="btn bo bxs" onclick="event.stopPropagation();quickQR('${p.id}')">▣ QR</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="11"><div class="empty"><div class="ei">⊞</div><div class="et">${curFilter.search||curFilter.status?'找不到符合條件的產品':'尚無產品圖面'}</div><div class="es">${curFilter.search||curFilter.status?'請調整搜尋條件':'點擊右上角「＋ 新增產品」開始建立'}</div></div></td></tr>`;
+  return`<div class="ph"><div><div class="ph-t">產品圖面</div><div class="ph-s">共 ${list.length} 件</div></div></div>
+  ${stats}
+  <div class="tw"><table><thead><tr>
+    <th>Logo</th><th>圖號</th><th>名稱／客戶</th><th>材質</th><th>類型</th><th>版次</th><th>狀態</th><th>QR</th><th>檔案</th><th>日期</th><th></th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════════
+// ASSEMBLY PAGE
+// ══════════════════════════════════════════════
+function renderAssemblyPage(){
+  const cm=Object.fromEntries(customers.map(c=>[c.id,c.name]));
+  const q=curFilter.search.toLowerCase();
+  const list=q?assemblies.filter(a=>a.num.toLowerCase().includes(q)||a.name.toLowerCase().includes(q)):assemblies;
+  const rows=list.length?list.map(a=>{
+    const pills=a.files.map(f=>`<span class="fp ${f.type}" onclick="event.stopPropagation();previewAsmFile('${a.id}','${f.id}')">${fIcon(f.type)} ${f.type.toUpperCase()}</span>`).join('');
+    return`<tr class="pr" onclick="openAsmPanel('${a.id}')">
+      <td><span class="dn">${a.num}</span></td>
+      <td><div class="dna">${a.name}</div><div class="ds">${cm[a.custId]||'—'}</div></td>
+      <td><span class="bdg b-rv">${a.rev}</span></td>
+      <td>${stBadge(a.status)}</td>
+      <td><span class="bdg b-asm">${a.bom.length} 件</span></td>
+      <td><div class="fps">${pills}</div></td>
+      <td><span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${a.date}</span></td>
+      <td><div class="ab">
+        <button class="btn bo bxs" onclick="event.stopPropagation();openAsmPanel('${a.id}')">展開 BOM</button>
+        <button class="btn b-amber bxs" onclick="event.stopPropagation();exportBOM('${a.id}')">↓ Excel</button>
+      </div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="8"><div class="empty"><div class="ei">⬡</div><div class="et">尚無組裝圖</div></div></td></tr>`;
+  return`<div class="ph"><div><div class="ph-t">組裝圖管理</div><div class="ph-s">共 ${list.length} 件</div></div></div>
+  <div class="sr">
+    <div class="sc blue"><div class="sl">組裝圖</div><div class="sv">${assemblies.length}</div></div>
+    <div class="sc green"><div class="sl">已核准</div><div class="sv">${assemblies.filter(a=>a.status==='approved').length}</div></div>
+    <div class="sc amber"><div class="sl">BOM 零件</div><div class="sv">${assemblies.reduce((s,a)=>s+a.bom.length,0)}</div><div class="sd">合計</div></div>
+    <div class="sc purple"><div class="sl">待審核</div><div class="sv">${assemblies.filter(a=>a.status==='review').length}</div></div>
+  </div>
+  <div class="tw"><table><thead><tr><th>圖號</th><th>名稱／客戶</th><th>版次</th><th>狀態</th><th>BOM</th><th>檔案</th><th>日期</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════════
+// PANEL - shared setup
+// ══════════════════════════════════════════════
+function openPanel(id){
+  const p=products.find(x=>x.id===id);if(!p)return;
+  selProd=p;selAsm=null;isEditMode=false;
+  const cust=customers.find(c=>c.id===p.custId);
+  const asm=assemblies.find(a=>a.id===p.parentAsmId);
+  el('pp-num').textContent=p.num;el('pp-rev').textContent=p.rev;
+  el('pp-st').innerHTML=stBadge(p.status);
+  el('pp-asm-tag').innerHTML=asm?`<span class="bdg b-asm" style="cursor:pointer" onclick="openAsmPanel('${asm.id}')">⬡ ${asm.num}</span>`:'';
+  el('pp-qr-tag').innerHTML=p.qrGenerated?'<span class="bdg b-qr">▣</span>':'';
+  el('pp-name').textContent=p.name;
+  el('pp-cust').textContent=cust?cust.name:'無指定客戶';
+  el('editToggleBtn').style.display=canDo('edit')?'':'none';
+  el('editToggleBtn').textContent='✎ 編輯';
+  setPanelLogo(p);
+  el('ptabs').style.display='';
+  setFooter('view');
+  switchTab('info',el('ptabs').querySelector('.ptab'));
+  el('panelOv').classList.add('open');
+}
+function openAsmPanel(id){
+  const a=assemblies.find(x=>x.id===id);if(!a)return;
+  selAsm=a;selProd=null;isEditMode=false;
+  const cust=customers.find(c=>c.id===a.custId);
+  el('pp-num').textContent=a.num;el('pp-rev').textContent=a.rev;
+  el('pp-st').innerHTML=stBadge(a.status);
+  el('pp-asm-tag').innerHTML='<span class="bdg b-asm">組裝圖</span>';
+  el('pp-qr-tag').innerHTML=a.qrGenerated?'<span class="bdg b-qr">▣</span>':'';
+  el('pp-name').textContent=a.name;
+  el('pp-cust').textContent=cust?cust.name:'無指定客戶';
+  el('editToggleBtn').style.display='none';
+  el('pnlh-logo-img').style.display='none';el('pnlh-logo-em').style.display='';el('pnlh-logo-em').textContent='⬡';
+  el('ptabs').style.display='';
+  setFooter('asm',id);
+  // default to bom tab
+  const tabs=el('ptabs').querySelectorAll('.ptab');
+  tabs.forEach(t=>t.classList.remove('on'));
+  tabs[2].classList.add('on');
+  curTab='bom';renderPanelTab('bom');
+  el('panelOv').classList.add('open');
+}
+function closePanel(){el('panelOv').classList.remove('open');}
+
+function setFooter(mode,asmId){
+  const f=el('pnlf');if(!f)return;
+  if(mode==='view')       f.innerHTML=`<button class="btn bp" style="flex:1" onclick="openDrivePnl()">↗ Google Drive</button><button class="btn bo" onclick="openAddVersion()">＋ 新版本</button>`;
+  else if(mode==='edit')  f.innerHTML=`<button class="btn b-green" style="flex:1" onclick="saveEdit()">✓ 儲存變更</button><button class="btn bo" onclick="cancelEdit()">取消</button>`;
+  else if(mode==='asm')   f.innerHTML=`<button class="btn bp" style="flex:1" onclick="openDrivePnl()">↗ Google Drive</button><button class="btn b-amber" onclick="exportBOM('${asmId}')">↓ 匯出 BOM Excel</button><button class="btn bo" onclick="genQRForAsm('${asmId}')">▣ QR</button>`;
+}
+function openDrivePnl(){const o=selProd||selAsm;if(o?.driveUrl)window.open(o.driveUrl,'_blank');else showToast('請先設定 Drive URL','err');}
+function openAddVersion(){const p=selProd;if(p){closePanel();setTimeout(()=>{openAddProduct();el('f-num').value=p.num;el('f-name').value=p.name;el('f-mat').value=p.material||'';el('f-cust').value=p.custId;el('f-url').value=p.driveUrl||'';const revs=['Rev A','Rev B','Rev C','Rev D','Rev E','Rev F'];el('f-rev').value=revs[Math.min(revs.indexOf(p.rev)+1,revs.length-1)];el('addProdTitle').textContent='新增版本：'+p.num;},100);}}
+
+// ══════════════════════════════════════════════
+// PANEL TABS
+// ══════════════════════════════════════════════
+function switchTab(tab,btn){
+  curTab=tab;
+  el('ptabs').querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderPanelTab(tab);
+}
+function renderPanelTab(tab){
+  const b=el('pnlb-content');if(!b)return;
+  const obj=selProd||selAsm;if(!obj)return;
+  if(tab==='info')        b.innerHTML=isEditMode?renderEditForm():renderInfoTab(obj);
+  else if(tab==='files')  b.innerHTML=renderFilesTab(obj);
+  else if(tab==='bom')    b.innerHTML=renderBOMTab(obj);
+  else if(tab==='qr')     {b.innerHTML=renderQRTab(obj);if(obj.qrGenerated)setTimeout(()=>genQRSilent(obj.driveUrl||`https://drive.google.com/search?q=${encodeURIComponent(obj.num)}`),80);}
+  else if(tab==='ai')     b.innerHTML=renderAIPanelTab(obj);
+  else if(tab==='hist')   b.innerHTML=renderHistTab(obj);
+}
+
+function renderInfoTab(obj){
+  const cust=customers.find(c=>c.id===obj.custId);
+  const asm=selProd?assemblies.find(a=>a.id===selProd.parentAsmId):null;
+  const typeMap={part:'零件圖',assembly:'組裝圖',detail:'細部圖',schematic:'電路圖'};
+  return`<div class="ps"><div class="pst">產品資訊</div>
+    <div class="mg3">
+      ${[
+        {k:'圖號',v:`<span class="mv m">${obj.num}</span>`},
+        {k:'版次',v:`<span class="mv m">${obj.rev}</span>`},
+        {k:'狀態',v:stBadge(obj.status)},
+        {k:'材質',v:`<span class="mv" style="color:var(--amber)">${obj.material||'—'}</span>`},
+        {k:'類型',v:typeMap[obj.type]||'—'},
+        {k:'負責人',v:obj.author},
+        {k:'更新日期',v:`<span class="mv m">${obj.date}</span>`},
+        {k:'客戶',v:cust?cust.name:'—'},
+        {k:'所屬組裝',v:asm?`<span style="color:var(--pink);cursor:pointer" onclick="openAsmPanel('${asm.id}')">${asm.num}</span>`:'—'},
+        {k:'Drive',v:obj.driveUrl?`<a href="${obj.driveUrl}" target="_blank" style="color:var(--ac2);font-size:11px;font-family:monospace">開啟 ↗</a>`:'未設定'},
+        {k:'備註',v:obj.notes||'—'},
+      ].map(x=>`<div class="mi"><div class="mk">${x.k}</div><div class="mv">${x.v}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderEditForm(){
+  const p=selProd;if(!p)return'';
+  const custSel='<option value="">— 無指定 —</option>'+customers.map(c=>`<option value="${c.id}"${c.id===p.custId?' selected':''}>${c.name}</option>`).join('');
+  const asmSel='<option value="">— 無 —</option>'+assemblies.map(a=>`<option value="${a.id}"${a.id===p.parentAsmId?' selected':''}>${a.num} ${a.name}</option>`).join('');
+  const revOpts=['Rev A','Rev B','Rev C','Rev D','Rev E','Rev F'].map(r=>`<option${r===p.rev?' selected':''}>${r}</option>`).join('');
+  const stOpts=['draft','review','approved','obsolete'].map(s=>`<option value="${s}"${s===p.status?' selected':''}>${{draft:'草稿',review:'審核中',approved:'已核准',obsolete:'已廢止'}[s]}</option>`).join('');
+  return`<div class="info-box">✎ 編輯模式</div>
+    <div class="fr2">
+      <div class="fr"><label class="fl">圖號</label><input class="ef" id="e-num" value="${p.num}"></div>
+      <div class="fr"><label class="fl">版次</label><select class="ef" id="e-rev">${revOpts}</select></div>
+    </div>
+    <div class="fr"><label class="fl">產品名稱</label><input class="ef" id="e-name" value="${p.name}"></div>
+    <div class="fr"><label class="fl">材質</label><input class="ef" id="e-mat" value="${p.material||''}" placeholder="例：S45C 碳鋼"></div>
+    <div class="fr2">
+      <div class="fr"><label class="fl">客戶</label><select class="ef" id="e-cust">${custSel}</select></div>
+      <div class="fr"><label class="fl">狀態</label><select class="ef" id="e-status">${stOpts}</select></div>
+    </div>
+    <div class="fr2">
+      <div class="fr"><label class="fl">負責人</label><input class="ef" id="e-author" value="${p.author}"></div>
+      <div class="fr"><label class="fl">所屬組裝</label><select class="ef" id="e-parent">${asmSel}</select></div>
+    </div>
+    <div class="fr"><label class="fl">Drive URL</label><input class="ef" id="e-url" value="${p.driveUrl||''}"></div>
+    <div class="fr"><label class="fl">變更說明</label><input class="ef" id="e-note" placeholder="說明此次修改…"></div>`;
+}
+
+function renderFilesTab(obj){
+  const files=obj.files||[];
+  return`<div class="ps">
+    <div class="pst">圖面檔案（${files.length}）${canDo('edit')?`<button class="btn bo bxs" onclick="openAddFileMov()">＋ 新增</button>`:''}
+    </div>
+    <div class="fl2">${files.length?files.map(f=>`
+      <div class="fi-item" onclick="previewFile('${obj.id}','${f.id}')">
+        <div class="fic ${f.type}">${fIcon(f.type)}</div>
+        <div class="fin"><div class="fin-n">${f.name}</div><div class="fin-m">${f.size} · ${f.date}</div></div>
+        <div class="fia">
+          <button class="btn bo bxs" onclick="event.stopPropagation();previewFile('${obj.id}','${f.id}')">預覽</button>
+          <button class="btn bo bxs" onclick="event.stopPropagation();window.open('https://drive.google.com','_blank')">下載</button>
+          ${canDo('edit')?`<button class="btn b-red bxs" onclick="event.stopPropagation();rmFile('${obj.id}','${f.id}')">✕</button>`:''}
+        </div>
+      </div>`).join(''):`<div class="empty" style="padding:20px"><div class="et">尚無檔案</div></div>`}
+    </div>
+  </div>`;
+}
+
+function renderBOMTab(obj){
+  if(selAsm){
+    const a=selAsm;
+    const rows=a.bom.map(item=>`
+      <div class="bom-row" onclick="openPanel('${item.partId}')">
+        <div class="bom-num">${item.num}</div>
+        <div class="bom-name">${item.name}</div>
+        <div class="bom-mat">${item.material||'—'}</div>
+        <div class="bom-qty">${item.qty}</div>
+        <div class="bom-unit">${item.unit}</div>
+        <div style="min-width:60px;flex-shrink:0"><span class="bdg b-rv" style="font-size:9px">${item.rev}</span></div>
+        <div style="min-width:70px;flex-shrink:0">${stBadge(item.status)}</div>
+        <div style="margin-left:auto"><button class="btn bo bxs" onclick="event.stopPropagation();openPanel('${item.partId}')">查看</button></div>
+      </div>`).join('');
+    return`<div class="ps"><div class="pst">BOM 用料清單（${a.bom.length} 件）</div>
+      <div class="bom-wrap">
+        <div class="bom-hdr"><span class="bdg b-asm">${a.num}</span><span style="font-size:12px;font-weight:700;color:var(--text)">${a.name}</span><span style="font-size:11px;color:var(--t3);margin-left:auto">${a.rev}</span></div>
+        <div class="bom-col-hdr"><div style="min-width:130px">圖號</div><div style="flex:1">名稱</div><div style="min-width:100px">材質</div><div style="min-width:36px;text-align:center">數量</div><div style="min-width:28px">單位</div><div style="min-width:60px">版次</div><div style="min-width:70px">狀態</div><div style="width:50px"></div></div>
+        ${rows||'<div class="empty" style="padding:16px"><div class="et">尚無零件</div></div>'}
+      </div>
+    </div>`;
+  }
+  // product: show which assembly it belongs to
+  const asm=assemblies.find(a=>a.bom.some(b=>b.partId===selProd?.id));
+  return`<div class="ps"><div class="pst">所屬組裝圖</div>${
+    asm?`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer" onclick="openAsmPanel('${asm.id}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="bdg b-asm">${asm.num}</span><span class="bdg b-rv">${asm.rev}</span>${stBadge(asm.status)}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${asm.name}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">共 ${asm.bom.length} 件零件</div>
+      <div style="margin-top:10px"><button class="btn b-amber bxs" onclick="event.stopPropagation();exportBOM('${asm.id}')">↓ 匯出 BOM Excel</button></div>
+    </div>`:`<div class="empty" style="padding:20px"><div class="et">此零件未加入任何組裝圖</div></div>`
+  }</div>`;
+}
+
+function renderQRTab(obj){
+  const url=obj.driveUrl||`https://drive.google.com/search?q=${encodeURIComponent(obj.num)}`;
+  return`<div class="ps"><div class="pst">QR Code<button class="btn bo bxs" onclick="genQR()">產生 QR</button></div>
+    <div class="qr-card">
+      <div class="qr-box" id="qr-box"><span style="font-size:24px;color:var(--t3)">▣</span></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">掃描開啟 Google Drive</div>
+        <div style="font-size:10px;color:var(--ac2);font-family:var(--mono);word-break:break-all;margin-bottom:8px" id="qr-url">${obj.qrGenerated?url:'尚未產生'}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="qr-btns">
+          <button class="btn bo bxs" id="qr-dl" onclick="downloadQR()" style="${obj.qrGenerated?'':'display:none'}">↓ 下載</button>
+          <button class="btn bo bxs" id="qr-print" onclick="printQR()" style="${obj.qrGenerated?'':'display:none'}">⎙ 列印</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAIPanelTab(obj){
+  return`<div class="ai-panel">
+    <div class="ai-hdr"><div class="ai-dot"></div><div style="font-size:12px;font-weight:700;color:var(--ac2)">✦ AI 圖面判讀</div><span style="font-size:10px;color:var(--t2);margin-left:auto">Claude AI</span></div>
+    <div class="ai-body">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn b-purple bsm" onclick="aiAnalyze('${obj.id}','fields')">✦ 辨識欄位</button>
+        <button class="btn b-purple bsm" onclick="aiAnalyze('${obj.id}','diff')">✦ 版本差異</button>
+        <button class="btn b-purple bsm" onclick="aiAnalyze('${obj.id}','parts')">✦ 辨識零件</button>
+      </div>
+      <div id="ai-panel-result-${obj.id}" style="font-size:12px;color:var(--t3)">點選上方功能執行 AI 分析</div>
+    </div>
+  </div>`;
+}
+
+function renderHistTab(obj){
+  const vers=obj.versions||[];
+  return`<div class="ps"><div class="pst">版本歷程</div>
+    <div class="vlist">${vers.map((v,i)=>`
+      <div class="vi">
+        <div class="vll"><div class="vd ${i===0?(v.status==='approved'?'ok':'cur'):(v.status==='approved'?'ok':'')}"></div>${i<vers.length-1?'<div class="vc2"></div>':''}</div>
+        <div class="vct"><div class="vtop"><span class="vr">${v.rev}</span>${stBadge(v.status)}<span class="vdt">${v.date}</span></div><div class="vno">${v.note}</div><div class="vau">${v.author}</div></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// EDIT PRODUCT
+// ══════════════════════════════════════════════
+function toggleEdit(){
+  if(!canDo('edit')){showToast('您的權限不足以編輯','err');return;}
+  isEditMode=!isEditMode;
+  el('editToggleBtn').textContent=isEditMode?'← 返回':'✎ 編輯';
+  setFooter(isEditMode?'edit':'view');
+  renderPanelTab('info');
+}
+function cancelEdit(){isEditMode=false;el('editToggleBtn').textContent='✎ 編輯';setFooter('view');renderPanelTab('info');}
+function saveEdit(){
+  const p=selProd;if(!p)return;
+  const oldRev=p.rev,newRev=el('e-rev').value;
+  p.num=el('e-num').value.trim()||p.num;
+  p.name=el('e-name').value.trim()||p.name;
+  p.material=el('e-mat').value.trim();
+  p.rev=newRev;p.status=el('e-status').value;
+  p.author=el('e-author').value.trim()||p.author;
+  p.custId=el('e-cust').value;p.parentAsmId=el('e-parent').value;
+  p.driveUrl=el('e-url').value.trim();
+  const note=el('e-note').value.trim();
+  p.date=today();
+  if(note||newRev!==oldRev) p.versions.unshift({rev:newRev,date:p.date,note:note||'更新資訊',author:p.author,status:p.status});
+  showToast('已儲存：'+p.name,'ok');
+  isEditMode=false;openPanel(p.id);renderPage(curPage);refreshNav();
+  saveData();
+}
+
+function rmFile(pid,fid){
+  const p=products.find(x=>x.id===pid)||assemblies.find(x=>x.id===pid);
+  if(!p)return;p.files=p.files.filter(f=>f.id!==fid);
+  renderPanelTab(curTab);renderPage(curPage);showToast('已刪除檔案','ok');
+  saveData();
+}
+function openAddFileMov(){
+  const obj=selProd||selAsm;if(!obj)return;
+  pending2=[];el('ufl2').innerHTML='';el('af-note').value='';
+  el('af-info').textContent='產品：'+obj.name;
+  el('addFileMov').classList.add('open');
+}
+function submitAddFile(){
+  if(!pending2.length){showToast('請選擇至少一個檔案','err');return;}
+  const obj=selProd||selAsm;if(!obj)return;
+  const td=today();
+  pending2.forEach((f,i)=>obj.files.push({id:'F'+Date.now()+i,name:f.name,type:fClass(f.name),size:fmtSz(f.size),date:td,driveUrl:'https://drive.google.com'}));
+  showToast(`已新增 ${pending2.length} 個檔案`,'ok');closeMov('addFileMov');renderPanelTab(curTab);renderPage(curPage);
+  saveData();
+}
+
+// ══════════════════════════════════════════════
+// ADD PRODUCT
+// ══════════════════════════════════════════════
+function openAddProduct(){
+  pending1=[];modalLogoDataUrl='';
+  el('ufl1').innerHTML='';el('f-prog').style.display='none';el('ai-quick-result').style.display='none';
+  ['f-num','f-name','f-mat','f-note','f-url','f-author'].forEach(id=>{const e2=el(id);if(e2)e2.value='';});
+  el('f-rev').value='Rev A';el('f-status').value='draft';
+  // reset logo preview
+  el('prod-logo-preview-img').style.display='none';el('prod-logo-preview-em').style.display='';el('prod-logo-fi2').value='';
+  const cSel=el('f-cust');cSel.innerHTML='<option value="">— 無指定 —</option>'+customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  const pSel=el('f-parent');pSel.innerHTML='<option value="">— 無 —</option>'+assemblies.map(a=>`<option value="${a.id}">${a.num} ${a.name}</option>`).join('');
+  el('addProdTitle').textContent='新增產品';
+  el('addProdMov').classList.add('open');
+}
+function submitProduct(){
+  const num=el('f-num').value.trim(),name=el('f-name').value.trim();
+  if(!num||!name){showToast('請填寫圖號與名稱','err');return;}
+  const rev=el('f-rev').value,custId=el('f-cust').value,status=el('f-status').value;
+  const material=el('f-mat').value.trim(),author=el('f-author').value.trim()||currentUser.name;
+  const driveUrl=el('f-url').value.trim(),note=el('f-note').value.trim()||'初版';
+  const parentAsmId=el('f-parent').value,td=today();
+  el('f-prog').style.display='block';
+  let prog=0;
+  const iv=setInterval(()=>{
+    prog=Math.min(prog+Math.random()*18+8,100);
+    el('f-pfill').style.width=prog+'%';
+    el('f-ptxt').textContent=prog<100?`儲存中… ${Math.round(prog)}%`:'完成！';
+    if(prog>=100){clearInterval(iv);setTimeout(()=>{
+      const newFiles=pending1.map((f,i)=>({id:'F'+Date.now()+i,name:f.name,type:fClass(f.name),size:fmtSz(f.size),date:td,driveUrl:'https://drive.google.com'}));
+      const ex=products.find(p=>p.num===num);
+      if(ex){
+        ex.rev=rev;ex.status=status;ex.date=td;ex.material=material;ex.author=author;ex.driveUrl=driveUrl;
+        if(modalLogoDataUrl)ex.logoDataUrl=modalLogoDataUrl;
+        ex.files=[...ex.files,...newFiles];
+        ex.versions.unshift({rev,date:td,note,author,status});
+        showToast(`已更新 ${num} → ${rev}`,'ok');
+      }else{
+        products.unshift({id:'P'+Date.now(),num,name,custId,type:el('f-type').value,material,rev,status,date:td,author,driveUrl,qrGenerated:false,notes:note,parentAsmId,logoDataUrl:modalLogoDataUrl,files:newFiles,versions:[{rev,date:td,note,author,status}]});
+        showToast(`已新增 ${num}`,'ok');
+      }
+      saveData();closeMov('addProdMov');refreshNav();renderPage(curPage);
+    },350);}
+  },180);
+}
+
+// ══════════════════════════════════════════════
+// ADD ASSEMBLY
+// ══════════════════════════════════════════════
+function openAddAssembly(){
+  bomRows=[];renderBomBuilder();
+  ['a-num','a-name','a-note','a-url','a-author'].forEach(id=>{const e2=el(id);if(e2)e2.value='';});
+  const cSel=el('a-cust');cSel.innerHTML='<option value="">— 無指定 —</option>'+customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  el('addAsmMov').classList.add('open');
+}
+function addBomRow(){bomRows.push({partId:'',qty:1,unit:'件'});renderBomBuilder();}
+function renderBomBuilder(){
+  const bb=el('bom-builder');if(!bb)return;
+  bb.innerHTML=bomRows.length?bomRows.map((r,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 56px 56px auto;gap:6px;margin-bottom:6px;align-items:center">
+      <select class="fi2" style="font-size:11.5px" onchange="bomRows[${i}].partId=this.value">
+        <option value="">— 選擇零件圖 —</option>
+        ${products.map(p=>`<option value="${p.id}"${p.id===r.partId?' selected':''}>${p.num} ${p.name}（${p.material||'—'}）</option>`).join('')}
+      </select>
+      <input class="fi2" type="number" value="${r.qty}" min="1" style="font-size:11.5px" onchange="bomRows[${i}].qty=+this.value">
+      <input class="fi2" value="${r.unit}" style="font-size:11.5px" placeholder="單位" onchange="bomRows[${i}].unit=this.value">
+      <button class="btn b-red bxs" onclick="bomRows.splice(${i},1);renderBomBuilder()">✕</button>
+    </div>`).join(''):`<div style="color:var(--t3);font-size:12px;padding:6px 0">點擊「＋ 新增零件」加入用料</div>`;
+}
+function submitAssembly(){
+  const num=el('a-num').value.trim(),name=el('a-name').value.trim();
+  if(!num||!name){showToast('請填寫組裝圖號與名稱','err');return;}
+  const rev=el('a-rev').value,td=today(),author=el('a-author').value.trim()||currentUser.name;
+  const bom=bomRows.filter(r=>r.partId).map(r=>{const p=products.find(x=>x.id===r.partId)||{};return{partId:r.partId,num:p.num||'?',name:p.name||'?',qty:r.qty,unit:r.unit,rev:p.rev||'Rev A',status:p.status||'draft',material:p.material||'—'};});
+  assemblies.unshift({id:'A'+Date.now(),num,name,custId:el('a-cust').value,rev,status:'draft',date:td,author,driveUrl:el('a-url').value.trim(),qrGenerated:false,notes:el('a-note').value.trim(),bom,files:[],versions:[{rev,date:td,note:'初版',author,status:'draft'}]});
+  showToast('已建立組裝圖：'+num,'ok');closeMov('addAsmMov');refreshNav();renderPage('assembly');
+  saveData();
+}
+
+// ══════════════════════════════════════════════
+// EXPORT BOM
+// ══════════════════════════════════════════════
+function exportBOM(id){
+  const a=assemblies.find(x=>x.id===id);if(!a)return;
+  const wb=XLSX.utils.book_new();
+  const hdr=[['圖號','零件名稱','材質','數量','單位','版次','狀態']];
+  const rows=a.bom.map(b=>[b.num,b.name,b.material||'—',b.qty,b.unit,b.rev,{approved:'已核准',review:'審核中',draft:'草稿',obsolete:'已廢止'}[b.status]||b.status]);
+  const ws=XLSX.utils.aoa_to_sheet([...hdr,...rows]);
+  ws['!cols']=[{wch:18},{wch:28},{wch:14},{wch:8},{wch:8},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'BOM');
+  const info=[['組裝圖號',a.num],['組裝名稱',a.name],['版次',a.rev],['狀態',a.status],['負責人',a.author],['日期',a.date],['零件數',a.bom.length]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'組裝資訊');
+  XLSX.writeFile(wb,`BOM_${a.num}_${a.rev}.xlsx`);
+  showToast('BOM Excel 已匯出','ok');
+}
+
+// ══════════════════════════════════════════════
+// QR CODE
+// ══════════════════════════════════════════════
+function genQR(){
+  const obj=selProd||selAsm;if(!obj)return;
+  const url=obj.driveUrl||`https://drive.google.com/search?q=${encodeURIComponent(obj.num)}`;
+  genQRSilent(url);
+  const urlEl=el('qr-url');if(urlEl)urlEl.textContent=url;
+  const dlEl=el('qr-dl'),prEl=el('qr-print');
+  if(dlEl)dlEl.style.display='';if(prEl)prEl.style.display='';
+  obj.qrGenerated=true;
+  el('pp-qr-tag').innerHTML='<span class="bdg b-qr">▣</span>';
+  refreshNav();renderPage(curPage);showToast('QR Code 已產生','ok');
+}
+function genQRSilent(url){
+  const box=el('qr-box');if(!box)return;box.innerHTML='';
+  try{new QRCode(box,{text:url,width:76,height:76,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});}catch(e){}
+}
+function quickQR(pid){const p=products.find(x=>x.id===pid);if(p){selProd=p;openPanel(pid);setTimeout(()=>{switchTab('qr',el('ptabs').querySelectorAll('.ptab')[3]);setTimeout(genQR,100);},200);}}
+function genQRForAsm(id){const a=assemblies.find(x=>x.id===id);if(a){selAsm=a;switchTab('qr',el('ptabs').querySelectorAll('.ptab')[3]);setTimeout(genQR,100);}}
+function downloadQR(){
+  const canvas=document.querySelector('#qr-box canvas');if(!canvas){showToast('請先產生 QR','err');return;}
+  const obj=selProd||selAsm;
+  const a=document.createElement('a');a.download=`QR_${obj.num}.png`;a.href=canvas.toDataURL('image/png');a.click();
+  showToast('QR 已下載','ok');
+}
+function printQR(){
+  const canvas=document.querySelector('#qr-box canvas');if(!canvas)return;
+  const obj=selProd||selAsm;
+  const win=window.open('','_blank','width=400,height=500');
+  win.document.write(`<!DOCTYPE html><html><head><title>QR-${obj.num}</title><style>body{font-family:sans-serif;text-align:center;padding:32px;background:#fff}img{width:180px;height:180px;border:1px solid #eee;border-radius:8px;margin:12px auto;display:block}.n{font-size:17px;font-weight:bold;font-family:monospace}.t{font-size:12px;color:#666;margin-top:3px}.r{font-size:10px;color:#999;margin-top:2px}</style></head><body><div class="n">${obj.num}</div><div class="t">${obj.name}</div><div class="r">${obj.rev}${obj.material?' · '+obj.material:''}</div><img src="${canvas.toDataURL('image/png')}" alt="QR Code"><div style="font-size:10px;color:#aaa;margin-top:8px">掃描開啟 Google Drive 圖面</div><script>window.onload=()=>window.print()<\/script></body></html>`);
+}
+function renderQRPage(){
+  const all=[...products.map(p=>({...p,isAsm:false})),...assemblies.map(a=>({...a,isAsm:true}))];
+  const withQR=all.filter(x=>x.qrGenerated),noQR=all.filter(x=>!x.qrGenerated);
+  const card=x=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px;display:flex;gap:10px;align-items:center;cursor:pointer" onclick="${x.isAsm?`openAsmPanel('${x.id}')`:`openPanel('${x.id}')`}">
+    <div style="font-size:26px;flex-shrink:0">${x.qrGenerated?'▣':'⬜'}</div>
+    <div style="flex:1;min-width:0"><div style="font-family:var(--mono);font-size:10px;color:var(--ac2)">${x.num}</div><div style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.name}</div><div style="font-size:10px;color:var(--t3)">${x.rev}${x.material?' · '+x.material:''}</div></div>
+    ${!x.qrGenerated?`<button class="btn bp bxs" onclick="event.stopPropagation();quickQR('${x.id}')">產生</button>`:''}
+  </div>`;
+  return`<div class="ph"><div><div class="ph-t">QR Code 管理</div><div class="ph-s">已建立 ${withQR.length} / ${all.length}</div></div><button class="btn b-amber" onclick="batchQR()">▣ 批次全部產生</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div><div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">已建立 (${withQR.length})</div><div style="display:flex;flex-direction:column;gap:7px">${withQR.map(card).join('')||'<div class="empty"><div class="et">尚無</div></div>'}</div></div>
+    <div><div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">未建立 (${noQR.length})</div><div style="display:flex;flex-direction:column;gap:7px">${noQR.map(card).join('')||'<div class="empty"><div class="ei">✓</div><div class="et">全部完成</div></div>'}</div></div>
+  </div>`;
+}
+function batchQR(){products.forEach(p=>p.qrGenerated=true);assemblies.forEach(a=>a.qrGenerated=true);refreshNav();renderPage('qrpage');showToast('全部 QR Code 已標記完成','ok');}
+
+// ══════════════════════════════════════════════
+// AI
+// ══════════════════════════════════════════════
+function demoAI(fname){
+  const n=['MEC','ELE','PIP','ARC'][Math.floor(Math.random()*4)];
+  return{drawingNum:`${n}-2024-0${Math.floor(Math.random()*9)+1}`,revision:'Rev B',title:fname.replace(/\.[^.]+$/,''),author:'王大明',date:'2024-03-15',scale:'1:2',material:'S45C 碳鋼',tolerance:'±0.05mm',notes:'所有圓角 R2',confidence:{drawingNum:'high',revision:'high',title:'med'}};
+}
+function renderAIPage(){
+  return`<div class="ph"><div><div class="ph-t">✦ AI 圖面判讀中心</div><div class="ph-s">上傳圖面後自動辨識欄位、比對差異</div></div></div>
+  <div class="ai-panel" style="margin-bottom:14px">
+    <div class="ai-hdr"><div class="ai-dot"></div><div style="font-size:12px;font-weight:700;color:var(--ac2)">✦ 上傳圖面 AI 分析</div></div>
+    <div class="ai-body">
+      <div class="dz" id="ai-dz" onclick="el('ai-fi').click()" ondragover="dzOv(event,'ai-dz')" ondragleave="el('ai-dz').classList.remove('drag')" ondrop="aiDrop(event)">
+        <div class="dz-i">✦</div><div class="dz-t"><strong>上傳圖面</strong>讓 AI 自動判讀</div><div class="dz-s">PDF · JPG · PNG</div>
+      </div>
+      <input type="file" id="ai-fi" style="display:none" accept=".pdf,.jpg,.jpeg,.png" onchange="runAIAnalysis(this.files[0])">
+      <div id="ai-main-result"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="ai-panel">
+      <div class="ai-hdr"><div class="ai-dot"></div><div style="font-size:12px;font-weight:700;color:var(--ac2)">版本差異比對</div></div>
+      <div class="ai-body">
+        <div class="fr2" style="margin-bottom:8px">
+          <div><label class="fl">舊版本</label><select class="fi2" id="diff-old">${products.map(p=>`<option value="${p.id}">${p.num} ${p.rev}</option>`).join('')}</select></div>
+          <div><label class="fl">新版本</label><select class="fi2" id="diff-new">${products.map(p=>`<option value="${p.id}">${p.num} ${p.rev}</option>`).join('')}</select></div>
+        </div>
+        <button class="btn b-purple bsm" onclick="runDiff()">✦ 比對差異</button>
+        <div id="diff-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="ai-panel">
+      <div class="ai-hdr"><div class="ai-dot"></div><div style="font-size:12px;font-weight:700;color:var(--ac2)">BOM 自動生成</div></div>
+      <div class="ai-body">
+        <div style="font-size:12px;color:var(--t2);margin-bottom:10px">上傳組裝圖，AI 自動辨識零件並生成 BOM</div>
+        <div class="dz" style="padding:14px" onclick="el('bom-ai-fi').click()"><div class="dz-t"><strong>上傳組裝圖</strong></div><div class="dz-s">PDF · DWG · JPG</div></div>
+        <input type="file" id="bom-ai-fi" style="display:none" accept=".pdf,.jpg,.png" onchange="runBOMAI(this.files[0])">
+        <div id="bom-ai-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>`;
+}
+async function runAIAnalysis(file){
+  if(!file)return;
+  const res=el('ai-main-result');
+  res.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:12px;color:var(--ac2);font-size:12px"><div class="ai-dot"></div>AI 正在分析圖面中…</div>`;
+  await sleep(200);
+  try{
+    const isImg=file.type.startsWith('image/');
+    let content;
+    if(isImg){const b64=await toBase64(file);content=[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'請分析這張工程圖面，辨識以下欄位，僅回傳 JSON 不要其他文字：{"drawingNum":"","revision":"","title":"","author":"","date":"","scale":"","material":"","tolerance":"","notes":"","confidence":{"drawingNum":"high/med/low","revision":"high/med/low","title":"high/med/low"}}'}];}
+    else content=[{type:'text',text:`分析工程圖面：${file.name}，回傳 JSON：{"drawingNum":"","revision":"","title":"","author":"","date":"","scale":"","material":"","tolerance":"","notes":"","confidence":{"drawingNum":"high","revision":"high","title":"high"}}`}];
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    let parsed;try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){parsed=null;}
+    if(parsed)displayAI(parsed,'ai-main-result',true);
+    else res.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;font-size:12px;color:var(--t2)">${text}</div>`;
+  }catch(e){displayAI(demoAI(file.name),'ai-main-result',true);}
+}
+function displayAI(parsed,cid,showApply){
+  tempAiResult=parsed;
+  const fields=[{k:'圖號',v:'drawingNum'},{k:'版次',v:'revision'},{k:'名稱',v:'title'},{k:'設計者',v:'author'},{k:'日期',v:'date'},{k:'比例尺',v:'scale'},{k:'材質',v:'material'},{k:'公差',v:'tolerance'},{k:'備註',v:'notes'}];
+  el(cid).innerHTML=`<div class="ai-result">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;color:var(--green)">✓ AI 辨識完成</span>
+      ${showApply?`<button class="btn b-green bxs" onclick="applyAI()">✓ 套用至表單</button>`:''}
+    </div>
+    ${fields.filter(f=>parsed[f.v]).map(f=>`<div class="ai-field"><div class="ai-key">${f.k}</div><div class="ai-val">${parsed[f.v]}</div>${parsed.confidence?.[f.v]?`<span class="ai-conf ${parsed.confidence[f.v]}">${parsed.confidence[f.v]==='high'?'高':'中'}</span>`:''}</div>`).join('')}
+  </div>`;
+}
+function applyAI(){
+  if(!tempAiResult)return;
+  const m={drawingNum:'f-num',revision:'f-rev',title:'f-name',author:'f-author',material:'f-mat'};
+  Object.entries(m).forEach(([ak,fid])=>{const e2=el(fid);if(e2&&tempAiResult[ak]){if(e2.tagName==='SELECT'){for(const o of e2.options)if(o.value===tempAiResult[ak]||o.text===tempAiResult[ak]){o.selected=true;break;}}else e2.value=tempAiResult[ak];}});
+  showToast('AI 辨識結果已套用','ok');
+}
+function runAIOnPending(){
+  if(!pending1.length){showToast('請先上傳圖面','err');return;}
+  const res=el('ai-quick-result');res.style.display='block';
+  res.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:10px;color:var(--ac2);font-size:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)"><div class="ai-dot"></div>AI 正在分析…</div>`;
+  setTimeout(()=>displayAI(demoAI(pending1[0].name),'ai-quick-result',true),1200);
+}
+async function aiAnalyze(pid,type){
+  const p=products.find(x=>x.id===pid);if(!p)return;
+  const eid=`ai-panel-result-${pid}`;const e2=el(eid);if(!e2)return;
+  e2.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--ac2);font-size:12px"><div class="ai-dot"></div>AI 分析中…</div>`;
+  await sleep(900);
+  if(type==='fields')displayAI(demoAI(p.num),eid,false);
+  else if(type==='diff')e2.innerHTML=`<div class="ai-result"><div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:10px">✓ 版本差異分析</div><div class="ai-diff-row changed"><span class="ai-dtag" style="background:var(--amdim);color:var(--amber)">變更</span><div><div style="font-size:12px;color:var(--text)">安裝孔徑</div><div style="font-size:11px;color:var(--t3)">φ8.5 → φ9.0 (H7)</div></div></div><div class="ai-diff-row added"><span class="ai-dtag" style="background:var(--gdim);color:var(--green)">新增</span><div><div style="font-size:12px;color:var(--text)">補強肋板 × 4</div><div style="font-size:11px;color:var(--t3)">t=3mm</div></div></div><div class="ai-diff-row changed"><span class="ai-dtag" style="background:var(--amdim);color:var(--amber)">變更</span><div><div style="font-size:12px;color:var(--text)">材質</div><div style="font-size:11px;color:var(--t3)">${p.material||'S45C'} → 調質處理 HRC28-32</div></div></div></div>`;
+  else e2.innerHTML=`<div class="ai-result"><div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:10px">✓ 辨識到的零件</div>${[{n:'底座本體',m:p.material||'S45C',q:1},{n:'固定螺絲 M8×20',m:'SCM440',q:4},{n:'定位銷 φ8h6',m:'SUJ2',q:2},{n:'密封墊片',m:'NBR',q:1}].map(r=>`<div class="ai-field"><div class="ai-key">${r.n}</div><div class="ai-val">${r.m} × ${r.q}</div><span class="ai-conf high">高</span></div>`).join('')}</div>`;
+}
+function runDiff(){
+  const oId=el('diff-old').value,nId=el('diff-new').value;
+  const oP=products.find(x=>x.id===oId),nP=products.find(x=>x.id===nId);
+  const res=el('diff-result');
+  if(oId===nId){res.innerHTML=`<div style="color:var(--red);font-size:12px">請選擇不同的圖面</div>`;return;}
+  res.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--ac2);font-size:12px"><div class="ai-dot"></div>比對中…</div>`;
+  setTimeout(()=>{
+    res.innerHTML=`<div class="ai-result"><div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">✓ ${oP.num} ${oP.rev} vs ${nP.num} ${nP.rev}</div>
+      <div class="ai-diff-row changed"><span class="ai-dtag" style="background:var(--amdim);color:var(--amber)">變更</span><div style="font-size:12px;color:var(--text)">狀態：${oP.status} → ${nP.status}</div></div>
+      <div class="ai-diff-row changed"><span class="ai-dtag" style="background:var(--amdim);color:var(--amber)">變更</span><div style="font-size:12px;color:var(--text)">材質：${oP.material||'—'} → ${nP.material||'—'}</div></div>
+      <div class="ai-diff-row changed"><span class="ai-dtag" style="background:var(--amdim);color:var(--amber)">變更</span><div style="font-size:12px;color:var(--text)">更新日期：${oP.date} → ${nP.date}</div></div>
+      <div class="ai-diff-row added"><span class="ai-dtag" style="background:var(--gdim);color:var(--green)">新增</span><div style="font-size:12px;color:var(--text)">新增檔案：${Math.abs(nP.files.length-oP.files.length)} 個</div></div>
+    </div>`;
+  },1200);
+}
+function runBOMAI(file){
+  if(!file)return;const res=el('bom-ai-result');
+  res.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--ac2);font-size:12px"><div class="ai-dot"></div>解析 BOM 中…</div>`;
+  setTimeout(()=>{res.innerHTML=`<div class="ai-result"><div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">✓ 偵測到 4 件零件</div>${[{n:'外殼總成',m:'SUS304',q:1},{n:'傳動齒輪組',m:'SCM440',q:2},{n:'軸承 6204',m:'SUJ2',q:4},{n:'密封蓋',m:'POM',q:1}].map(r=>`<div class="ai-field"><div class="ai-key">${r.n}</div><div class="ai-val">${r.m} × ${r.q}</div><span class="ai-conf high">高</span></div>`).join('')}<button class="btn b-green bsm" style="margin-top:10px" onclick="showToast('已建立暫存 BOM 清單','ok')">→ 建立組裝圖</button></div>`;},1500);
+}
+function aiDrop(e){e.preventDefault();el('ai-dz').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)runAIAnalysis(f);}
+
+// ══════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════
+function renderUsersPage(){
+  if(!currentUser||currentUser.role!=='admin')return`<div class="empty"><div class="ei">🔒</div><div class="et">需要管理員權限</div></div>`;
+  return`<div class="ph"><div><div class="ph-t">人員管理</div><div class="ph-s">共 ${USERS.length} 位使用者</div></div></div>
+  <div class="user-grid">${USERS.map(u=>`
+    <div class="ucard">
+      <div class="uav" style="background:${ROLE_COLOR[u.role]}22;color:${ROLE_COLOR[u.role]}">${u.name.slice(0,2)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${u.name}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--mono)">${u.username} · ${u.email||'—'}</div>
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+          <span class="bdg" style="background:${ROLE_COLOR[u.role]}22;color:${ROLE_COLOR[u.role]};border-color:${ROLE_COLOR[u.role]}44">${ROLE_LABEL[u.role]}</span>
+          <span class="bdg b-dr">${u.dept||'—'}</span>
+          <span class="bdg ${u.active?'b-ok':'b-ob'}">${u.active?'啟用':'停用'}</span>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:8px">
+          <button class="btn bo bxs" onclick="openEditUser('${u.id}')">✎ 編輯</button>
+          ${u.id!==currentUser.id?`<button class="btn bo bxs" onclick="toggleUserActive('${u.id}')">${u.active?'停用':'啟用'}</button><button class="btn b-red bxs" onclick="deleteUser('${u.id}','${u.name}')">刪除</button>`:''}
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+function openAddUser(){if(!canDo('canAddUser')){showToast('只有管理員可新增人員','err');return;}editingUserId=null;['u-username','u-pwd','u-name','u-email','u-dept'].forEach(id=>{const e2=el(id);if(e2)e2.value='';});el('userModalTitle').textContent='新增人員';el('userSubmitBtn').textContent='新增';el('addUserMov').classList.add('open');}
+function openEditUser(id){const u=USERS.find(x=>x.id===id);if(!u)return;editingUserId=id;el('u-username').value=u.username;el('u-pwd').value='';el('u-name').value=u.name;el('u-email').value=u.email||'';el('u-role').value=u.role;el('u-dept').value=u.dept||'';el('userModalTitle').textContent='編輯：'+u.name;el('userSubmitBtn').textContent='儲存';el('addUserMov').classList.add('open');}
+function submitUser(){
+  const username=el('u-username').value.trim(),name=el('u-name').value.trim(),pwd=el('u-pwd').value;
+  if(!username||!name){showToast('請填寫帳號與姓名','err');return;}
+  if(editingUserId){const u=USERS.find(x=>x.id===editingUserId);u.username=username;u.name=name;u.email=el('u-email').value.trim();u.role=el('u-role').value;u.dept=el('u-dept').value.trim();if(pwd)u.password=pwd;showToast('人員已更新','ok');}
+  else{if(!pwd||pwd.length<6){showToast('密碼需至少 6 字元','err');return;}if(USERS.find(x=>x.username===username)){showToast('帳號已存在','err');return;}USERS.push({id:'U'+Date.now(),username,password:pwd,name,email:el('u-email').value.trim(),role:el('u-role').value,dept:el('u-dept').value.trim(),active:true});showToast('已新增：'+name,'ok');}
+  saveUsers();closeMov('addUserMov');refreshNav();renderPage('users');
+}
+function toggleUserActive(id){const u=USERS.find(x=>x.id===id);if(u){u.active=!u.active;saveUsers();renderPage('users');showToast(u.name+(u.active?' 已啟用':' 已停用'),'ok');}}
+function deleteUser(id,name){if(!confirm(`確定刪除「${name}」？`))return;if(id===currentUser.id){showToast('無法刪除自己','err');return;}USERS=USERS.filter(u=>u.id!==id);saveUsers();refreshNav();renderPage('users');showToast('已刪除：'+name,'ok');}
+
+// ══════════════════════════════════════════════
+// CUSTOMERS
+// ══════════════════════════════════════════════
+function renderCustomers(){
+  const q=curFilter.search.toLowerCase();
+  const list=q?customers.filter(c=>c.name.toLowerCase().includes(q)||c.contact.toLowerCase().includes(q)):customers;
+  const cards=list.length?list.map((c,i)=>{
+    const col=COLORS[i%COLORS.length];
+    const pc=products.filter(p=>p.custId===c.id).length+assemblies.filter(a=>a.custId===c.id).length;
+    return`<div class="cc">
+      <div class="cc-av" style="background:${col}22;color:${col};border:1px solid ${col}33">${c.name.slice(0,2)}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${c.name}</div>
+      <div style="font-size:11px;color:var(--t3)">${c.contact||'—'} · ${c.tel||'—'}</div>
+      <div style="font-size:11px;color:var(--t3)">${c.email||'—'}</div>
+      ${c.note?`<div style="font-size:10px;color:var(--t3);margin-top:2px">${c.note}</div>`:''}
+      <div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text)">${pc}</div><div style="font-size:9px;color:var(--t3)">圖面數</div></div>
+      </div>
+      <div class="cc-acts">
+        <button class="btn bo bxs" onclick="openEditCust('${c.id}')">✎ 編輯</button>
+        <button class="btn b-red bxs" onclick="delCust('${c.id}','${c.name}')">刪除</button>
+      </div>
+    </div>`;
+  }).join(''):`<div class="empty" style="grid-column:1/-1"><div class="ei">◎</div><div class="et">尚無客戶</div></div>`;
+  return`<div class="ph"><div><div class="ph-t">客戶管理</div><div class="ph-s">共 ${list.length} 位</div></div></div><div class="cg">${cards}</div>`;
+}
+function openAddCustomer(){editingCustId=null;['c-name','c-contact','c-tel','c-email','c-addr','c-note'].forEach(id=>{const e2=el(id);if(e2)e2.value='';});el('custModalTitle').textContent='新增客戶';el('custSubmitBtn').textContent='新增';el('addCustMov').classList.add('open');}
+function openEditCust(id){const c=customers.find(x=>x.id===id);if(!c)return;editingCustId=id;el('c-name').value=c.name;el('c-contact').value=c.contact||'';el('c-tel').value=c.tel||'';el('c-email').value=c.email||'';el('c-addr').value=c.addr||'';el('c-note').value=c.note||'';el('custModalTitle').textContent='編輯客戶';el('custSubmitBtn').textContent='儲存';el('addCustMov').classList.add('open');}
+function submitCustomer(){const name=el('c-name').value.trim();if(!name){showToast('請填寫客戶名稱','err');return;}const d={name,contact:el('c-contact').value.trim(),tel:el('c-tel').value.trim(),email:el('c-email').value.trim(),addr:el('c-addr').value.trim(),note:el('c-note').value.trim()};if(editingCustId){Object.assign(customers.find(x=>x.id===editingCustId),d);showToast('客戶已更新','ok');}else{customers.push({id:'C'+Date.now(),...d});showToast('已新增客戶：'+name,'ok');}closeMov('addCustMov');refreshNav();renderPage('customers');saveData();}
+function delCust(id,name){if(!confirm(`確定刪除「${name}」？`))return;customers=customers.filter(c=>c.id!==id);refreshNav();renderPage('customers');showToast('已刪除客戶','ok');saveData();}
+
+// ══════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════
+function renderSettings(){
+  if(currentUser.role!=='admin')return`<div class="empty"><div class="ei">🔒</div><div class="et">需要管理員權限</div></div>`;
+  return`<div class="ph"><div><div class="ph-t">系統設定</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px">Google Sheets 連線</div>
+      <div class="fr"><label class="fl">Apps Script URL</label><input class="fi2" id="cfg-url" value="${localStorage.getItem('sheetsUrl')||''}" placeholder="https://script.google.com/macros/s/.../exec" style="font-family:var(--mono);font-size:11px"></div>
+      <button class="btn bp bsm" onclick="saveCfg()">儲存連線</button>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">品牌設定</div>
+      <button class="btn bp bsm" onclick="openBrandModal()">⚙ 修改系統品牌 / Logo</button>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">白標授權（White-label）</div>
+      <div style="font-size:11.5px;color:var(--t2);line-height:1.8">可更換品牌名稱、Logo、主色對外販售。<br>支援按使用者授權或客戶數計費。</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">系統資訊</div>
+      <div style="font-size:11px;color:var(--t3);line-height:1.9;font-family:var(--mono)">v4.0 · 使用者 ${USERS.filter(u=>u.active).length}/${USERS.length}<br>產品 ${products.length} · 組裝圖 ${assemblies.length} · 客戶 ${customers.length}</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:16px;grid-column:1/-1">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">⚠ 危險區域</div>
+      <div style="font-size:11.5px;color:var(--t2);margin-bottom:12px;line-height:1.7">清除所有產品、客戶、組裝圖資料（帳號設定不受影響）。此操作無法復原。</div>
+      <button class="btn b-red bsm" onclick="clearAllData()">🗑 清除全部資料</button>
+    </div>
+  </div>`;
+}
+function saveCfg(){const url=el('cfg-url').value.trim();if(url){localStorage.setItem('sheetsUrl',url);el('connLabel').textContent='已連線 Google Sheets';showToast('設定已儲存','ok');}else showToast('請填入 URL','err');}
+
+function clearAllData(){
+  if(!confirm('確定要清除所有產品、客戶、組裝圖資料？\n\n此操作無法復原！'))return;
+  if(!confirm('再次確認：所有圖面資料將被刪除，繼續嗎？'))return;
+  products=[];assemblies=[];customers=[];
+  saveData();refreshNav();renderPage('settings');
+  showToast('已清除所有資料','ok');
+}
+
+function renderWelcome(){
+  el('mainContent').innerHTML=`
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px">
+    <div style="font-size:56px;margin-bottom:16px">📐</div>
+    <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px">歡迎使用圖面管理系統</div>
+    <div style="font-size:14px;color:var(--t2);margin-bottom:32px;line-height:1.8;max-width:480px">
+      系統已準備就緒，請從以下步驟開始建立您的圖面資料庫。<br>所有資料儲存於本機，重新整理後不會消失。
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;max-width:640px;margin-bottom:32px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:20px;cursor:pointer;transition:border-color .15s" onclick="goPage('customers',null);openAddCustomer()" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:28px;margin-bottom:8px">◎</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">步驟 1</div>
+        <div style="font-size:12px;color:var(--t2)">新增客戶</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:20px;cursor:pointer;transition:border-color .15s" onclick="goPage('products',null);openAddProduct()" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:28px;margin-bottom:8px">⊞</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">步驟 2</div>
+        <div style="font-size:12px;color:var(--t2)">新增產品圖面</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:20px;cursor:pointer;transition:border-color .15s" onclick="goPage('assembly',null);openAddAssembly()" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:28px;margin-bottom:8px">⬡</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">步驟 3</div>
+        <div style="font-size:12px;color:var(--t2)">建立組裝圖 BOM</div>
+      </div>
+    </div>
+    ${currentUser?.role==='admin'?`
+    <div style="background:var(--adim);border:1px solid rgba(79,142,247,.2);border-radius:var(--r);padding:12px 20px;font-size:12px;color:var(--t2);max-width:480px;line-height:1.7">
+      <strong style="color:var(--ac2)">管理員提醒：</strong>請先至「人員管理」修改預設 admin 密碼，並為團隊成員建立個人帳號。
+      <br><button class="btn bo bsm" style="margin-top:8px" onclick="goPage('users',null)">前往人員管理 →</button>
+    </div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// FILE PREVIEW
+// ══════════════════════════════════════════════
+function previewFile(pid,fid){const p=products.find(x=>x.id===pid)||assemblies.find(x=>x.id===pid);const f=p?.files.find(x=>x.id===fid);if(f)showPreview(f);}
+function previewAsmFile(aid,fid){const a=assemblies.find(x=>x.id===aid);const f=a?.files.find(x=>x.id===fid);if(f)showPreview(f);}
+function showPreview(f){
+  el('prev-fname').textContent=f.name;el('prev-fmeta').textContent=f.type.toUpperCase()+' · '+f.size;
+  const body=el('prev-body');const t=f.type;
+  if(t==='img')body.innerHTML=`<div style="text-align:center"><div style="width:600px;height:440px;background:#111;border:1px solid rgba(52,211,153,.2);border-radius:var(--rl);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative">${photoSVG()}<div style="position:absolute;top:8px;left:12px;font-size:9px;font-family:monospace;color:rgba(52,211,153,.4)">JPG/PNG IMAGE</div></div><div style="margin-top:12px;font-size:11px;color:var(--t3)">連線 Google Drive 後顯示實際圖片</div><div style="margin-top:8px"><button class="btn bp" onclick="window.open('https://drive.google.com','_blank')">↗ 開啟原圖</button></div></div>`;
+  else if(t==='pdf')body.innerHTML=`<div style="text-align:center"><div style="width:520px;height:450px;background:#0a050a;border:1px solid rgba(248,113,113,.2);border-radius:var(--rl);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><svg viewBox="0 0 400 360" width="400">${pdfSVG()}</svg><div style="position:absolute;top:10px;left:14px;font-family:monospace;font-size:9px;color:rgba(248,113,113,.5)">PDF</div></div><div style="margin-top:12px"><button class="btn bp" onclick="window.open('https://drive.google.com','_blank')">↗ 開啟 PDF</button></div></div>`;
+  else if(t==='stp')body.innerHTML=`<div style="text-align:center"><div style="width:580px;height:450px;background:#05070e;border:1px solid rgba(167,139,250,.2);border-radius:var(--rl);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><svg viewBox="0 0 500 400" width="500">${stpSVG()}</svg><div style="position:absolute;top:10px;left:14px;font-family:monospace;font-size:9px;color:rgba(167,139,250,.5)">3D STP</div></div><div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><button class="btn bp" onclick="window.open('https://drive.google.com','_blank')">↗ 下載 STP</button><button class="btn bo" onclick="window.open('https://3dviewer.net','_blank')">⬡ 3D Viewer</button></div></div>`;
+  else body.innerHTML=`<div style="text-align:center"><div style="width:600px;height:460px;background:#020408;border:1px solid rgba(96,165,250,.18);border-radius:var(--rl);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><svg viewBox="0 0 600 460" width="600" height="460">${cadSVG(f.name)}</svg><div style="position:absolute;top:10px;left:14px;font-family:monospace;font-size:9px;color:rgba(96,165,250,.4)">DWG/DXF CAD</div></div><div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><button class="btn bp" onclick="window.open('https://drive.google.com','_blank')">↗ 下載 CAD</button><button class="btn bo" onclick="window.open('https://viewer.autodesk.com','_blank')">Autodesk Viewer</button></div></div>`;
+  el('prevOv').classList.add('open');
+}
+function closePreview(){el('prevOv').classList.remove('open');}
+
+function photoSVG(){return`<svg viewBox="0 0 560 400" width="560" height="400"><rect width="560" height="400" fill="#162030"/><rect y="280" width="560" height="120" fill="#111414"/><rect x="160" y="120" width="240" height="170" rx="8" fill="#222d40" stroke="rgba(96,165,250,.3)" stroke-width="1.5"/><rect x="188" y="148" width="60" height="44" rx="4" fill="#1a2235" stroke="rgba(96,165,250,.2)" stroke-width="1"/><circle cx="320" cy="182" r="36" fill="#1a2235" stroke="rgba(96,165,250,.25)" stroke-width="1.5"/><circle cx="320" cy="182" r="18" fill="#111824" stroke="rgba(96,165,250,.2)" stroke-width="1"/><rect x="188" y="220" width="192" height="22" rx="3" fill="#111824" stroke="rgba(96,165,250,.15)" stroke-width="0.7"/></svg>`;}
+function pdfSVG(){return`<rect x="55" y="5" width="250" height="350" rx="7" fill="#150a0a" stroke="rgba(248,113,113,.25)" stroke-width="1"/><rect x="55" y="5" width="250" height="34" rx="7" fill="rgba(248,113,113,.12)"/><text x="180" y="27" fill="#f87171" font-size="12" text-anchor="middle" font-family="monospace" font-weight="bold">PDF</text><rect x="78" y="52" width="204" height="8" rx="3" fill="rgba(255,255,255,.1)"/><rect x="78" y="68" width="170" height="8" rx="3" fill="rgba(255,255,255,.07)"/><rect x="78" y="84" width="188" height="8" rx="3" fill="rgba(255,255,255,.08)"/><rect x="78" y="108" width="204" height="70" rx="5" fill="rgba(59,130,246,.06)" stroke="rgba(59,130,246,.15)" stroke-width="1"/><rect x="78" y="194" width="204" height="8" rx="3" fill="rgba(255,255,255,.07)"/><rect x="78" y="210" width="160" height="8" rx="3" fill="rgba(255,255,255,.05)"/><rect x="78" y="270" width="100" height="40" rx="4" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="0.5"/><rect x="192" y="270" width="90" height="40" rx="4" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="0.5"/>`;}
+function stpSVG(){return`${Array.from({length:22},(_,i)=>`<line x1="${i*24}" y1="0" x2="${i*24}" y2="400" stroke="rgba(167,139,250,.04)" stroke-width="0.5"/>`).join('')}<g transform="translate(250,200)"><polygon points="0,-110 95,-55 0,0 -95,-55" fill="rgba(167,139,250,.22)" stroke="rgba(167,139,250,.65)" stroke-width="1.3"/><polygon points="95,-55 95,55 0,110 0,0" fill="rgba(167,139,250,.1)" stroke="rgba(167,139,250,.5)" stroke-width="1.3"/><polygon points="-95,-55 -95,55 0,110 0,0" fill="rgba(167,139,250,.16)" stroke="rgba(167,139,250,.5)" stroke-width="1.3"/><circle cx="0" cy="-110" r="5" fill="rgba(167,139,250,.9)"/><circle cx="95" cy="-55" r="5" fill="rgba(167,139,250,.7)"/><circle cx="-95" cy="-55" r="5" fill="rgba(167,139,250,.7)"/><circle cx="0" cy="110" r="5" fill="rgba(167,139,250,.7)"/><line x1="0" y1="110" x2="115" y2="55" stroke="rgba(59,130,246,.6)" stroke-width="2"/><line x1="0" y1="110" x2="-115" y2="55" stroke="rgba(34,197,94,.6)" stroke-width="2"/><line x1="0" y1="110" x2="0" y2="20" stroke="rgba(248,113,113,.6)" stroke-width="2"/><text x="122" y="60" fill="rgba(59,130,246,.7)" font-size="12" font-family="monospace">X</text><text x="-134" y="60" fill="rgba(34,197,94,.7)" font-size="12" font-family="monospace">Y</text><text x="6" y="14" fill="rgba(248,113,113,.7)" font-size="12" font-family="monospace">Z</text></g>`;}
+function cadSVG(name){return`${Array.from({length:32},(_,i)=>`<line x1="${i*20}" y1="0" x2="${i*20}" y2="460" stroke="rgba(96,165,250,.04)" stroke-width="0.5"/>`).join('')}${Array.from({length:25},(_,i)=>`<line x1="0" y1="${i*20}" x2="600" y2="${i*20}" stroke="rgba(96,165,250,.04)" stroke-width="0.5"/>`).join('')}<rect x="60" y="40" width="430" height="330" fill="none" stroke="rgba(96,165,250,.5)" stroke-width="1.5"/><rect x="100" y="70" width="150" height="110" fill="none" stroke="rgba(96,165,250,.4)" stroke-width="1"/><circle cx="370" cy="205" r="80" fill="none" stroke="rgba(96,165,250,.4)" stroke-width="1"/><circle cx="370" cy="205" r="40" fill="none" stroke="rgba(96,165,250,.25)" stroke-width="0.7" stroke-dasharray="5,3"/><rect x="120" y="210" width="100" height="70" fill="none" stroke="rgba(96,165,250,.35)" stroke-width="0.8"/><line x1="60" y1="205" x2="490" y2="205" stroke="rgba(248,113,113,.3)" stroke-width="0.6" stroke-dasharray="8,5"/><line x1="290" y1="40" x2="290" y2="370" stroke="rgba(248,113,113,.3)" stroke-width="0.6" stroke-dasharray="8,5"/><line x1="60" y1="386" x2="490" y2="386" stroke="rgba(96,165,250,.4)" stroke-width="0.9"/><text x="275" y="402" fill="rgba(96,165,250,.45)" font-size="9" text-anchor="middle" font-family="monospace">430.00</text><rect x="330" y="60" width="160" height="110" fill="rgba(96,165,250,.03)" stroke="rgba(96,165,250,.3)" stroke-width="0.7"/><text x="410" y="76" fill="rgba(96,165,250,.35)" font-size="7" text-anchor="middle" font-family="monospace">DRAWING NO.</text><text x="410" y="100" fill="rgba(96,165,250,.7)" font-size="9" text-anchor="middle" font-family="monospace">${(name.split('.')[0]).slice(0,16)}</text><text x="410" y="124" fill="rgba(96,165,250,.3)" font-size="7" text-anchor="middle" font-family="monospace">SCALE 1:2  A3</text>`;}
+
+// ══════════════════════════════════════════════
+// FILE UPLOAD UTILS
+// ══════════════════════════════════════════════
+function dzOv(e,id){e.preventDefault();el(id).classList.add('drag');}
+function dzDp(e,id,n){e.preventDefault();el(id).classList.remove('drag');addPF(n,e.dataTransfer.files);}
+function addPF(n,files){const arr=n===1?pending1:pending2;for(const f of files)if(!arr.find(x=>x.name===f.name))arr.push(f);renderPF(n);}
+function renderPF(n){const arr=n===1?pending1:pending2;el('ufl'+n).innerHTML=arr.map((f,i)=>`<div class="ufi"><span class="fp ${fClass(f.name)}" style="font-size:9px;flex-shrink:0">${fExt(f.name).toUpperCase()}</span><span class="ufn">${f.name}</span><span style="font-size:10px;color:var(--t3);font-family:monospace;flex-shrink:0">${fmtSz(f.size)}</span><button class="ufrm" onclick="pRm(${n},${i})">✕</button></div>`).join('');}
+function pRm(n,i){if(n===1)pending1.splice(i,1);else pending2.splice(i,1);renderPF(n);}
+function syncData(){showToast('同步中…','info');setTimeout(()=>showToast('同步完成','ok'),1600);}
+
+// ══════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════
+applyBrand();
+</script>
+</body>
+</html>
